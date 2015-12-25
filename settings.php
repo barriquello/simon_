@@ -127,7 +127,7 @@
 //6 #### Other settings
     // Log file configuration
     $log_enabled = true;
-    $log_filename = dirname(__FILE__).'\' . 'emoncms.log';
+    $log_filename = dirname(__FILE__).'/' . 'emoncms.log';
     // Log Level: 0=CRITICAL, 1=ERROR, 2=WARN, 3=INFO
     $log_level = 2;
 
