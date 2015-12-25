@@ -10,16 +10,16 @@ function monitor_controller()
     
     if (!isset($session['read'])) return array('content'=>$result);
 
-    include "Modules/feed/feed_model.php";
+    require_once "Modules/feed/feed_model.php";
     $feed = new Feed($mysqli,$redis,$feed_settings);
 
-    require "Modules/input/input_model.php"; // 295
+    require_once "Modules/input/input_model.php"; // 295
     $input = new Input($mysqli,$redis, $feed);
 
-    require "Modules/input/process_model.php"; // 886    
-	//$process = new Process($mysqli,$input,$feed,$user->get_timezone($session['userid']));
-	$process = new Process($mysqli,$input,$feed);
-    $process->set_timezone_offset($user->get_timezone($session['userid']));
+    require_once "Modules/process/process_model.php"; // 886    
+	$process = new Process($mysqli,$input,$feed,$user->get_timezone($session['userid']));
+	//$process = new Process($mysqli,$input,$feed);
+    //$process->set_timezone_offset($user->get_timezone($session['userid']));
 
     include "Modules/monitor/monitor_model.php";
     $monitor = new Monitor($mysqli,$redis,$process);
