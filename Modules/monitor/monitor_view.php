@@ -624,7 +624,7 @@ function int32tofloat(a)
   processlist_ui.monitors = monitors;
   processlist_ui.feedlist = feed.list_assoc();
   processlist_ui.inputlist = input.list_assoc();
-  processlist_ui.processlist = input.getallprocesses();
+  processlist_ui.processlist = monitor.getallprocesses();
   processlist_ui.events();
  
 </script>
