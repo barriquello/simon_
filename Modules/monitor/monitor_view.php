@@ -8,7 +8,7 @@
 <script type="text/javascript" src="<?php echo $path; ?>Modules/monitor/monitor.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Modules/monitor/processlist.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Modules/input/Views/input.js"></script>
-<script type="text/javascript" src="<?php echo $path; ?>Modules/input/Views/process_info.js"></script>
+<script type="text/javascript" src="<?php echo $path; ?>Modules/monitor/Views/process_info.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Modules/feed/feed.js"></script>
 
 <br>
