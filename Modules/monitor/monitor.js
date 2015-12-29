@@ -17,10 +17,10 @@ var monitor = {
     return result;
   },
   
-  'getallprocesses':function()
+  'getallprocesses':function(inputid)
   {
 	var result = {};
-	$.ajax({ url: path+"process/list.json", async: false, dataType: 'json', success: function(data){result = data;} });
+	$.ajax({ url: path+"process/list.json", data: "inputid="+inputid, async: false, dataType: 'json', success: function(data){result = data;} });
 	return result;
  }
 }
