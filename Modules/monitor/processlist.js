@@ -172,7 +172,8 @@ var processlist_ui =
                     var feedname = $('#feed-name').val();
                     var engine = $('#feed-engine').val();
                     var datatype = process[4];
-                    
+                    var feedtag = $('#new-feed-tag').val();
+					
                     var options = {};
                     if (datatype==2) { 
                         options = {interval:3600*24};
@@ -185,6 +186,7 @@ var processlist_ui =
                         return false;
                     }
                     
+					var result = feed.create(feedtag,feedname,datatype,engine,options);
                     var result = feed.create(feedname,datatype,engine,options);
                     feedid = result.feedid;
                 
