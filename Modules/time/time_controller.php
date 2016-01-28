@@ -25,10 +25,9 @@ function time_controller()
         $userid = $session['userid'];
         $result = $mysqli->query("SELECT timezone FROM users WHERE id = '$userid';");
         $row = $result->fetch_object();
-        
-        $now = new DateTime();
-        $now->setTimezone(new DateTimeZone($row->timezone));
-        $result = 't'.$now->format("H,i,s");
+
+        $time = (time() + ($row->timezone*3600));
+        $result = 't'.date('H,i,s',$time);
     }
 
     if ($route->action == 'server' && $session['read'])

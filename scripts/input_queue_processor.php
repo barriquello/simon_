@@ -1,54 +1,39 @@
 <?php
     /*
+
     All Emoncms code is released under the GNU Affero General Public License.
     See COPYRIGHT.txt and LICENSE.txt.
+
     ---------------------------------------------------------------------
     Emoncms - open source energy visualisation
-    Part of the OpenEnergyMonitor project: http://openenergymonitor.org
+    Part of the OpenEnergyMonitor project:
+    http://openenergymonitor.org
+
     */
 
     define('EMONCMS_EXEC', 1);
 
-    $fp = fopen("/var/lock/input_queue_processor.lock", "w");
+    $fp = fopen("runlock", "w");
     if (! flock($fp, LOCK_EX | LOCK_NB)) { echo "Already running\n"; die; }
 
-    chdir(dirname(__FILE__)."/../");
-    require "Lib/EmonLogger.php";
+    chdir("/var/www/emoncms");
+
     require "process_settings.php";
+    $mysqli = new mysqli($server,$username,$password,$database);
 
-    if (!$redis_enabled) { echo "Error: setting must be true: redis_enabled\n"; die; }
-    
-    $log = new EmonLogger(__FILE__);
-    $log->info("Starting MQTT Input Queue Processor script");
+    $redis = new Redis();
+    $redis->connect("127.0.0.1");
 
-    $mysqli = @new mysqli($server,$username,$password,$database);
-    if ($mysqli->connect_error) { $log->error("Can't connect to database:". $mysqli->connect_error);  die('Check log\n'); }
-
-    if ($redis_enabled) {
-        $redis = new Redis();
-        if (!$redis->connect($redis_server['host'], $redis_server['port'])) { 
-            $log->error("Could not connect to redis at ".$redis_server['host'].":".$redis_server['port']);  die('Check log\n'); 
-        }
-        if (!empty($redis_server['prefix'])) $redis->setOption(Redis::OPT_PREFIX, $redis_server['prefix']);
-        if (!empty($redis_server['auth'])) {
-            if (!$redis->auth($redis_server['auth'])) { 
-                $log->error("Could not connect to redis at ".$redis_server['host'].", autentication failed"); die('Check log\n');
-            }
-        }
-    } else {
-        $redis = false;
-    }
-    
     require("Modules/user/user_model.php");
     $user = new User($mysqli,$redis,null);
 
     include "Modules/feed/feed_model.php";
     $feed = new Feed($mysqli,$redis, $feed_settings);
 
-    require "Modules/input/input_model.php";
+    require "Modules/input/input_model.php"; // 295
     $input = new Input($mysqli,$redis, $feed);
 
-    require "Modules/process/process_model.php";
+    require "Modules/input/process_model.php"; // 886
     $process = new Process($mysqli,$input,$feed);
 
     $rn = 0;
@@ -111,18 +96,17 @@
             // Load current user input meta data
             // It would be good to avoid repeated calls to this
             $dbinputs = $input->get_inputs($userid);
-            
-            if (!isset($dbinputs[$nodeid]) && (count($dbinputs) >= $max_node_id_limit )) {
-                $log->error("Reached the maximal allowed number of diferent NodeIds, limit is $max_node_id_limit. Node '$nodeid' was ignored.");
-            } else {
 
-                $tmp = array();
-                foreach ($data as $name => $value)
+            $tmp = array();
+
+            foreach ($data as $name => $value)
+            {
+                if ($input->check_node_id_valid($nodeid))
                 {
                     if (!isset($dbinputs[$nodeid][$name])) {
                         $inputid = $input->create_input($userid, $nodeid, $name);
                         $dbinputs[$nodeid][$name] = true;
-                        $dbinputs[$nodeid][$name] = array('id'=>$inputid, 'processList'=>'');
+                        $dbinputs[$nodeid][$name] = array('id'=>$inputid);
                         $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
                     } else {
                         $inputid = $dbinputs[$nodeid][$name]['id'];
@@ -131,9 +115,9 @@
                         if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList']);
                     }
                 }
-
-                foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList']);
             }
+
+            foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList']);
         }
         usleep($usleep);
     }

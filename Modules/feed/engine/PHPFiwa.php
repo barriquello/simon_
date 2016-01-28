@@ -97,7 +97,7 @@ class PHPFiwa
      * @param integer $time The unix timestamp of the data point, in seconds
      * @param float $value The value of the data point
     */
-    public function post($id,$timestamp,$value,$arg=null)
+    public function post($id,$timestamp,$value)
     {   
         $this->log->info("PHPFiwa:post id=$id timestamp=$timestamp value=$value");
 
@@ -134,7 +134,7 @@ class PHPFiwa
         if ($timestamp < $meta->start_time) {
             $this->log->warn("PHPFiwa:post timestamp older than feed start time id=$id");
             return false; // in the past
-        }
+        }	
 
         // Calculate position in base data file of datapoint
         $point = floor(($timestamp - $meta->start_time) / $meta->interval[$layer]);
@@ -177,7 +177,7 @@ class PHPFiwa
         }
         
         // 2) Write new datapoint
-        fseek($fh,4*$point);
+	    fseek($fh,4*$point);
         if (!is_nan($value)) fwrite($fh,pack("f",$value)); else fwrite($fh,pack("f",NAN));
         
         if ($point >= $meta->npoints[$layer])
@@ -251,7 +251,6 @@ class PHPFiwa
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $dp The number of data points to return (used by some engines)
     */
-    //CHAVEIRO: this method is deprecated
     public function get_data_basic($feedid,$start,$end,$dp)
     {
         $feedid = intval($feedid);
@@ -322,78 +321,154 @@ class PHPFiwa
         return $data;
     }
     
+    public function get_data_exact($name,$start,$end,$outinterval)
+    {
+        $name = (int) $name;
+        $start = floatval($start)/1000;
+        $end = floatval($end)/1000;
+        $outinterval= (int) $outinterval;
+        if ($outinterval<1) $outinterval = 1;
+        if ($end<=$start) return false;
+        
+        $numdp = (($end - $start) / $outinterval);
+        if ($numdp>5000) return false;
+        if ($outinterval<5) $outinterval = 5;
 
-    public function get_data($feedid,$start,$end,$outinterval,$skipmissing,$limitinterval)
+        // If meta data file does not exist then exit
+        if (!$meta = $this->get_meta($name)) return false;
+        // $meta->npoints = $this->get_npoints($name);
+
+        $data = array();
+        $time = 0; $i = 0;
+
+        // The datapoints are selected within a loop that runs until we reach a
+        // datapoint that is beyond the end of our query range
+        $fh = fopen($this->dir.$name."_0.dat", 'rb');
+        while($time<=$end)
+        {
+            $time = $start + ($outinterval * $i);
+            $pos = round(($time - $meta->start_time) / $meta->interval[0]);
+
+            $value = null;
+
+            if ($pos>=0 && $pos < $meta->npoints[0])
+            {
+                // read from the file
+                fseek($fh,$pos*4);
+                $val = unpack("f",fread($fh,4));
+                // add to the data array if its not a nan value
+                if (!is_nan($val[1])) {
+                    $value = $val[1];
+                } else {
+                    $value = null;
+                }
+            }
+            $data[] = array($time*1000,$value);
+
+            $i++;
+        }
+        return $data;
+    }
+
+    public function get_data($feedid,$start,$end,$outinterval)
     {
         $feedid = intval($feedid);
         $start = intval($start/1000);
         $end = intval($end/1000);
         $outinterval = (int) $outinterval;
-        if ($outinterval<1) $outinterval = 1;
         
+        $layer = 0;
+
+        // If meta data file does not exist then exit
         if (!$meta = $this->get_meta($feedid)) return false;
 
-        // 1) Find nearest layer with interval less than request interval
-        $layer = 0;
-        if ($meta->nlayers>1 && $outinterval >= $meta->interval[1]) $layer = 1;
-        if ($meta->nlayers>2 && $outinterval >= $meta->interval[2]) $layer = 2;
-        if ($meta->nlayers>3 && $outinterval >= $meta->interval[3]) $layer = 3;
+
+
+        if ($outinterval<$meta->interval[0]) $outinterval = $meta->interval[0];
+        $dp = floor(($end - $start) / $outinterval);
+        if ($dp<1) return false;
         
-        // 2) Calculate the portion of the data file that we need to load:
+        $end = $start + ($dp * $outinterval);
+        
+        $dpratio = $outinterval / $meta->interval[0];
+        
+        // The number of datapoints in the query range:
+        //$dp_in_range = ceil(($end - $start) / $meta->interval[$layer]);
+        
+        // Cant return more datapoints than exists in bottom layer
+        //if ($dp>$dp_in_range) $dp = $dp_in_range;
+        
+        // Find out the closest layer to the range we have selected
+        //$dpratio = $dp_in_range / $dp;
+        
+        //print $dpratio;
+        
+        if ($meta->nlayers>1) {
+          if ($dpratio >= ($meta->interval[1] / $meta->interval[0])) $layer = 1;
+        }   
+        
+        if ($meta->nlayers>2) {
+          if ($dpratio >= ($meta->interval[2] / $meta->interval[0])) $layer = 2;
+        }
+        
+        if ($meta->nlayers>3) {
+          if ($dpratio >= ($meta->interval[3] / $meta->interval[0])) $layer = 3;
+        }
+        
+        $dp_in_range = ceil(($end - $start) / $meta->interval[$layer]);
+                
         $start_time_avl = floor($meta->start_time / $meta->interval[$layer]) * $meta->interval[$layer];
-        $startpos = ceil(($start - $start_time_avl) / $meta->interval[$layer]);
-        $endpos = ceil(($end - $start_time_avl) / $meta->interval[$layer]);
-        if ($startpos<0) $startpos = 0;
-        if ($endpos<$startpos) $endpos = $startpos;
-        $dp_in_range = $endpos - $startpos;
-        
-        // 3) Load data values available in time range
-        if ($dp_in_range) {
-            $fh = fopen($this->dir.$meta->id."_$layer.dat", 'rb');
-            fseek($fh,$startpos*4);
-            $layer_values = unpack("f*",fread($fh, 4 * $dp_in_range));
-            fclose($fh);
-            $dploaded = count($layer_values);
+
+        // Divided by the number we need gives the number of datapoints to skip
+        // i.e if we want 1000 datapoints out of 100,000 then we need to get one
+        // datapoints every 100 datapoints.
+        $skipsize = round($dp_in_range / $dp);
+        if ($skipsize<1) $skipsize = 1;
+
+        // Calculate the starting datapoint position in the timestore file
+        if ($start>$meta->start_time){
+            $startpos = ceil(($start - $start_time_avl) / $meta->interval[$layer]);
+        } else {
+            $startpos = 0;
         }
-        
+
         $data = array();
+        $time = 0; $i = 0;
+     
+        // The datapoints are selected within a loop that runs until we reach a
+        // datapoint that is beyond the end of our query range
+        $mstart = microtime(true);
+        $fh = fopen($this->dir.$meta->id."_$layer.dat", 'rb');
+        fseek($fh,$startpos*4);
+        $layer_values = unpack("f*",fread($fh, 4 * $dp_in_range));
+        fclose($fh);
 
-        $i=0;
-        $time0 = 0;
-        while($time0<=$end)
+        $count = count($layer_values);
+        
+        $naverage = $skipsize;
+        for ($i=1; $i<=($count-$naverage+1); $i+=$naverage)
         {
-            $time0 = $start + ($outinterval * $i);
-            $time1 = $start + ($outinterval * ($i+1));
-            $pos0 = round(($time0 - $start_time_avl) / $meta->interval[$layer]);
-            $pos1 = round(($time1 - $start_time_avl) / $meta->interval[$layer]);
+            // Calculate the average value of each block
+            $point_sum = 0;
+            $points_in_sum = 0;
             
-            $value = null;
-            
-            if ($pos0>=0)
-            {
-                $p = $pos0 - $startpos;
-                $point_sum = 0;
-                $points_in_sum = 0;
-                
-                while($p<$pos1-$startpos) {
-                    if (isset($layer_values[$p+1]) && !is_nan($layer_values[$p+1])) {
-                        $point_sum += $layer_values[$p+1];
-                        $points_in_sum++;
-                    }
-                    $p++;
+            for ($n=0; $n<$naverage; $n++) {
+                $value = $layer_values[$i+$n];
+                if (!is_nan($value)) {
+                    $point_sum += $value;
+                    $points_in_sum++;
                 }
-                
-                if ($points_in_sum) {
-                    $value = $point_sum / $points_in_sum;
-                }
-            }
-            
-            if ($value!==null || $skipmissing===0) {
-                $data[] = array($time0*1000,$value);
             }
 
-            $i++;
+            // If there was a value in the block then add to data array
+            if ($points_in_sum) {
+                $timestamp = $start_time_avl + ($meta->interval[$layer] * ($startpos+$i-1));
+                $average = $point_sum / $points_in_sum;
+                $data[] = array($timestamp*1000,$average);
+            }
         }
+        
+        //error_log("datapoints: ".($dp_in_range).":".$count." ".(microtime(true)-$mstart)." ".(memory_get_usage(true)/1024)."kb");
         
         return $data;
     }
@@ -418,7 +493,7 @@ class PHPFiwa
             fclose($fh);
 
             $val = unpack("f",$d);
-            $time = $meta->start_time + $meta->interval[0] * $meta->npoints[0];
+            $time = date("Y-n-j H:i:s", $meta->start_time + $meta->interval[0] * $meta->npoints[0]);
             
             return array('time'=>$time, 'value'=>$val[1]);
         }
@@ -757,12 +832,11 @@ class PHPFiwa
         return $meta;
     }
     
-    public function csv_export($feedid,$start,$end,$outinterval,$usertimezone)
+    public function old_csv_export($feedid,$start,$end,$outinterval)
     {
-        global $csv_decimal_places, $csv_decimal_place_separator, $csv_field_separator;
-
-        require_once "Modules/feed/engine/shared_helper.php";
-        $helperclass = new SharedHelper();
+        global $csv_decimal_places;
+        global $csv_decimal_place_separator;
+        global $csv_field_separator;
 
         $feedid = (int) $feedid;
         $start = (int) $start;
@@ -827,7 +901,7 @@ class PHPFiwa
         $exportfh = @fopen( 'php://output', 'w' );
 
         $data = array();
-        $i = 0;
+        $time = 0; $i = 0;
      
         // The datapoints are selected within a loop that runs until we reach a
         // datapoint that is beyond the end of our query range
@@ -856,11 +930,130 @@ class PHPFiwa
 
             // If there was a value in the block then add to data array
             if ($points_in_sum) {
-                $time = $start_time_avl + ($meta->interval[$layer] * ($startpos+$i-1));
+                $timestamp = $start_time_avl + ($meta->interval[$layer] * ($startpos+$i-1));
                 $average = $point_sum / $points_in_sum;
-                //$data[] = array($time*1000,$average);
-                $timenew = $helperclass->getTimeZoneFormated($time,$usertimezone);
-                fwrite($exportfh, $timenew.$csv_field_separator.number_format($average,$csv_decimal_places,$csv_decimal_place_separator,'')."\n");
+                //$data[] = array($timestamp*1000,$average);
+                
+                fwrite($exportfh, $timestamp.$csv_field_separator.number_format($average,$csv_decimal_places,$csv_decimal_place_separator,'')."\n");
+            }
+        }
+        
+        fclose($exportfh);
+        exit;
+    }
+	
+	public function csv_export($feedid,$start,$end,$outinterval)
+    {
+        global $csv_decimal_places;
+        global $csv_decimal_place_separator;
+        global $csv_field_separator;
+
+        $feedid = (int) $feedid;
+        $start = (int) $start;
+        $end = (int) $end;
+        $outinterval = (int) $outinterval;
+        
+        $layer = 0;
+
+        // If meta data file does not exist then exit
+        if (!$meta = $this->get_meta($feedid)) return false;
+
+        if ($outinterval<$meta->interval[0]) $outinterval = $meta->interval[0];
+        $dp = floor(($end - $start) / $outinterval);
+        if ($dp<1) return false;
+        
+        $end = $start + ($dp * $outinterval);
+        
+        $dpratio = $outinterval / $meta->interval[0];
+        
+        if ($meta->nlayers>1) {
+          if ($dpratio >= ($meta->interval[1] / $meta->interval[0])) $layer = 1;
+        }   
+        
+        if ($meta->nlayers>2) {
+          if ($dpratio >= ($meta->interval[2] / $meta->interval[0])) $layer = 2;
+        }
+        
+        if ($meta->nlayers>3) {
+          if ($dpratio >= ($meta->interval[3] / $meta->interval[0])) $layer = 3;
+        }
+        
+        $dp_in_range = ceil(($end - $start) / $meta->interval[$layer]);
+                
+        $start_time_avl = floor($meta->start_time / $meta->interval[$layer]) * $meta->interval[$layer];
+
+        // Divided by the number we need gives the number of datapoints to skip
+        // i.e if we want 1000 datapoints out of 100,000 then we need to get one
+        // datapoints every 100 datapoints.
+        $skipsize = round($dp_in_range / $dp);
+        if ($skipsize<1) $skipsize = 1;
+
+        // Calculate the starting datapoint position in the timestore file
+        if ($start>$meta->start_time){
+            $startpos = ceil(($start - $start_time_avl) / $meta->interval[$layer]);
+        } else {
+            $startpos = 0;
+        }
+
+        // There is no need for the browser to cache the output
+        header("Cache-Control: no-cache, no-store, must-revalidate");
+
+
+        
+		// There is no need for the browser to cache the output
+		header("Cache-Control: no-cache, no-store, must-revalidate");
+
+		// Tell the browser to handle output as a xls file to be downloaded
+		$filename = $feedid.".xls";
+
+		header('Content-Description: File Transfer');
+		header("Content-Disposition: attachment; filename=\"$filename\"");
+		header("Content-Type: application/vnd.ms-excel");
+		
+        header("Expires: 0");
+        header("Pragma: no-cache");
+
+		echo "time"."\t"."value"."\n";
+
+        // Write to output stream
+        $exportfh = @fopen( 'php://output', 'w' );
+
+        $data = array();
+        $time = 0; $i = 0;
+     
+        // The datapoints are selected within a loop that runs until we reach a
+        // datapoint that is beyond the end of our query range
+        $mstart = microtime(true);
+        $fh = fopen($this->dir.$meta->id."_$layer.dat", 'rb');
+        fseek($fh,$startpos*4);
+        $layer_values = unpack("f*",fread($fh, 4 * $dp_in_range));
+        fclose($fh);
+
+        $count = count($layer_values)-1;
+        
+        $naverage = $skipsize;
+        for ($i=1; $i<$count-$naverage; $i+=$naverage)
+        {
+            // Calculate the average value of each block
+            $point_sum = 0;
+            $points_in_sum = 0;
+            
+            for ($n=0; $n<$naverage; $n++) {
+                $value = $layer_values[$i+$n];
+                if (!is_nan($value)) {
+                    $point_sum += $value;
+                    $points_in_sum++;
+                }
+            }
+
+            // If there was a value in the block then add to data array
+            if ($points_in_sum) {
+                $timestamp = $start_time_avl + ($meta->interval[$layer] * ($startpos+$i-1));
+                $average = $point_sum / $points_in_sum;
+                //$data[] = array($timestamp*1000,$average);
+                
+                //fwrite($exportfh, $timestamp.$csv_field_separator.number_format($average,$csv_decimal_places,$csv_decimal_place_separator,'')."\n");
+				echo $timestamp."\t".number_format($average,$csv_decimal_places,$csv_decimal_place_separator,'')."\n";
             }
         }
         

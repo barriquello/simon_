@@ -10,13 +10,24 @@
     http://openenergymonitor.org
 */
 
+// dashboard/new						New dashboard
+// dashboard/delete 				POST: id=			Delete dashboard
+// dashboard/clone					POST: id=			Clone dashboard
+// dashboard/thumb 					List dashboards
+// dashboard/list         	List mode
+// dashboard/view?id=1			View and run dashboard (id)
+// dashboard/edit?id=1			Edit dashboard (id) with the draw editor
+// dashboard/ckeditor?id=1	Edit dashboard (id) with the CKEditor
+// dashboard/set POST				Set dashboard
+// dashboard/setconf POST 	Set dashboard configuration
+
 defined('EMONCMS_EXEC') or die('Restricted access');
 
 function dashboard_controller()
 {
-    global $mysqli, $session, $route;
+    global $mysqli, $path, $session, $route, $user;
 
-    require "Modules/dashboard/dashboard_model.php";
+    require_once "Modules/dashboard/dashboard_model.php";
     $dashboard = new Dashboard($mysqli);
 
     // id, userid, content, height, name, alias, description, main, public, published, showdescription
@@ -28,52 +39,53 @@ function dashboard_controller()
         if ($route->action == "list" && $session['write'])
         {
             $result = view("Modules/dashboard/Views/dashboard_list.php",array());
+
+            $menu = $dashboard->build_menu($session['userid'],"view");
+            $submenu = view("Modules/dashboard/Views/dashboard_menu.php", array('menu'=>$menu, 'type'=>"view"));
         }
 
-        else if ($route->action == "view")
+        if ($route->action == "view" && $session['read'])
         {
-            $dashid =(int) get('id');
-            if ($dashid) {
-                $dash = $dashboard->get($dashid);
+            if ($route->subaction) $dash = $dashboard->get_from_alias($session['userid'],$route->subaction,false,false);
+            elseif (isset($_GET['id'])) $dash = $dashboard->get($session['userid'],get('id'),false,false);
+            else $dash = $dashboard->get_main($session['userid']);
+
+            if ($dash) {
+              $result = view("Modules/dashboard/Views/dashboard_view.php",array('dashboard'=>$dash));
+            } else {
+              $result = view("Modules/dashboard/Views/dashboard_list.php",array());
             }
-            else if ($session['read']) {
-                if ($route->subaction) $dash = $dashboard->get_from_alias($session['userid'],$route->subaction);
-                else $dash = $dashboard->get_main($session['userid']);
-            }
-            if (isset($dash)){
-                if ($dash['public'] || ($session['read'] && $session['userid']>0 && $dash['userid']==$session['userid'] && !isset($session['profile']) )) {
-                    if (!$session['userid']) { $session['userid'] =  $dash['userid']; } // Required for passing userid to feed api
-                    $result = view("Modules/dashboard/Views/dashboard_view.php",array('dashboard'=>$dash));
-                } else if ($session['read'] && !isset($session['profile'])) {
-                    $result = view("Modules/dashboard/Views/dashboard_list.php",array());
-                }
-            }
-            if ($session['write']) {
-                $submenu = view("Modules/dashboard/Views/dashboard_menu.php", array('id'=>$dash['id'], 'type'=>"view"));
-            }
+
+            $menu = $dashboard->build_menu($session['userid'],"view");
+            $submenu = view("Modules/dashboard/Views/dashboard_menu.php", array('id'=>$dash['id'], 'menu'=>$menu, 'type'=>"view"));
         }
 
-        else if ($route->action == "edit" && $session['write'])
+        if ($route->action == "edit" && $session['write'])
         {
-            if ($route->subaction) $dash = $dashboard->get_from_alias($session['userid'],$route->subaction);
-            elseif (isset($_GET['id'])) $dash = $dashboard->get(get('id'));
+            if ($route->subaction) $dash = $dashboard->get_from_alias($session['userid'],$route->subaction,false,false);
+            elseif (isset($_GET['id'])) $dash = $dashboard->get($session['userid'],get('id'),false,false);
 
             $result = view("Modules/dashboard/Views/dashboard_edit_view.php",array('dashboard'=>$dash));
             $result .= view("Modules/dashboard/Views/dashboard_config.php", array('dashboard'=>$dash));
 
-            $submenu = view("Modules/dashboard/Views/dashboard_menu.php", array('id'=>$dash['id'],'type'=>"edit"));
+            $menu = $dashboard->build_menu($session['userid'],"edit");
+            $submenu = view("Modules/dashboard/Views/dashboard_menu.php", array('id'=>$dash['id'], 'menu'=>$menu, 'type'=>"edit"));
         }
     }
-    else if ($route->format == 'json')
+
+    if ($route->format == 'json')
     {
-        if ($session['write']) {
-            if ($route->action=='list') $result = $dashboard->get_list($session['userid'], false, false);
-            else if ($route->action=='set') $result = $dashboard->set($session['userid'],get('id'),get('fields'));
-            else if ($route->action=='setcontent') $result = $dashboard->set_content($session['userid'],post('id'),post('content'),post('height'));
-            else if ($route->action=='create') $result = $dashboard->create($session['userid']);
-            else if ($route->action=='delete') $result = $dashboard->delete(get('id'));
-            else if ($route->action=='clone') $result = $dashboard->dashclone($session['userid'], get('id'));
-        }
+        if ($route->action=='list' && $session['write']) $result = $dashboard->get_list($session['userid'], false, false);
+
+        if ($route->action=='set' && $session['write']) $result = $dashboard->set($session['userid'],get('id'),get('fields'));
+        if ($route->action=='setcontent' && $session['write']) $result = $dashboard->set_content($session['userid'],post('id'),post('content'),post('height'));
+        if ($route->action=='delete' && $session['write']) $result = $dashboard->delete(get('id'));
+
+        if ($route->action=='create' && $session['write']) $result = $dashboard->create($session['userid']);
+        if ($route->action=='clone' && $session['write']) $result = $dashboard->dashclone($session['userid'], get('id'));
     }
+
+    // $result = $dashboard->get_main($session['userid'])
+
     return array('content'=>$result, 'submenu'=>$submenu);
 }

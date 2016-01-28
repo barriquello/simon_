@@ -1,19 +1,31 @@
- <?php
-/*
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+<!----------------------------------------------------------------------------------------------------
+  
    All Emoncms code is released under the GNU Affero General Public License.
    See COPYRIGHT.txt and LICENSE.txt.
 
-   Emoncms - open source energy visualisation
-   Part of the OpenEnergyMonitor project: http://openenergymonitor.org
-*/
-    global $path, $embed;
- ?>
+    ---------------------------------------------------------------------
+    Emoncms - open source energy visualisation
+    Part of the OpenEnergyMonitor project:
+    http://openenergymonitor.org
 
-<!--[if IE]><script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/excanvas.min.js"></script><![endif]-->
-<script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.min.js"></script>
-<script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.time.min.js"></script>
-<script language="javascript" type="text/javascript" src="<?php echo $path; ?>Modules/vis/visualisations/common/api.js"></script>
+-------------------------------------------------------------------------------------->
+
+ <?php
+  global $path, $embed;
+ ?>
+        <!--[if IE]><script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/excanvas.min.js"></script><![endif]-->
+        <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.min.js"></script>
+        <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.time.min.js"></script>
+        <script language="javascript" type="text/javascript" src="<?php echo $path; ?>Modules/vis/visualisations/common/api.js"></script>
+    </head>
+    <body>
     
+    <!---------------------------------------------------------------------------------------------------
+    // Time window buttons
+    ---------------------------------------------------------------------------------------------------->
     <?php if (!$embed) { ?>
     <h2><?php echo _("Realtime data:"); ?> <?php echo $feedidname; ?></h2>
     <?php } ?>
@@ -30,96 +42,94 @@
     </div>
 
     <script id="source" language="javascript" type="text/javascript">
-    var feedid = <?php echo $feedid; ?>;                //Fetch table name
+    //--------------------------------------------------------------------------------------
+    var feedid = <?php echo $feedid; ?>;				//Fetch table name
     var path = "<?php echo $path; ?>";
-    var apikey = "<?php echo $apikey; ?>";  
+    var apikey = "<?php echo $apikey; ?>";	
     var embed = <?php echo $embed; ?>;
-    var data = [];
-    var timerget;
-    var timeWindow = (900*1000);  //Initial 15m time window
-    var fast_update_fps = 10;
-    
+    //----------------------------------------------------------------------------------------
+    // These start time and end time set the initial graph view window 
+    //----------------------------------------------------------------------------------------
+    var timeWindow = (3600000*0.1);				//Initial time window
+    var start = ((new Date()).getTime())-timeWindow;		//Get start time
+    var end = (new Date()).getTime();				//Get end time
+
     var graph_bound = $('#graph_bound'),
-    graph = $("#graph");
+       graph = $("#graph");
+
     graph.width(graph_bound.width()).height(graph_bound.height());
     if (embed) graph.height($(window).height());
 
-    var now = (new Date()).getTime();
-    var start = now-timeWindow;        // start time
-    var end = now;                     // end time
-    var interval = parseInt(((end*0.001+10) - (start*0.001-10)) / 800);
-    data = get_feed_data(feedid,(start-10000),(end+10000),interval,1,1);
-    
-    timerget = setInterval(getdp,7500);
-    gpu_fast();
-    //setInterval(fast,150);
-    
-    // GPU friendly fast update loop
-    function gpu_fast() { 
-      setTimeout( 
-       function() {
-          window.requestAnimationFrame(gpu_fast);
-          fast();
-        }
-      , 1000/fast_update_fps);
-    };
+    var data = [];
 
-    function fast() {
-      var now = (new Date()).getTime();
-      start = now-timeWindow;     // start time
-      end = now;                  // end time
+    $.ajax({                                      
+      url: path+'feed/data.json',                         
+      data: "&apikey="+apikey+"&id="+feedid+"&start="+(start-20)+"&end="+(end+20)+"&dp="+1000,
+      dataType: 'json',
+      async: false,                      
+      success: function(data_in) { data = data_in; } 
+    });   
+   
+    setInterval(fast,250);
+    
+    setInterval(getdp,5000);
+
+    function fast()
+    {
+      start = +new Date-timeWindow;		//Get start time
+      end = +new Date;   				//Get end time
       plot();
     }
 
     $(window).resize(function(){
       graph.width(graph_bound.width());
       if (embed) graph.height($(window).height());
-      window.requestAnimationFrame(plot);
+      plot();
     });
+    
+    function getdp()
+    {
+     var result = {};
+      $.ajax({ url: path+"feed/timevalue.json", data: "id="+feedid, dataType: 'json', async: false, success: function(datain) {result = datain;} });
 
-    function getdp(){
-      $.ajax({ url: 
-        path+"feed/timevalue.json", 
-        data: "id="+feedid, 
-        dataType: 'json', 
-        async: true, 
-        success: function(result) {
-          if (data.length==0 || data[data.length-1][0]!=result.time*1000) {
-            data.push([result.time*1000,parseFloat(result.value)]);
-          }
-          if (data.length>0 && data[1][0]<(start)) data.splice(0, 1);
-          data.sort();
-        }
-     });
+      var timestamp = new Date;
+      
+      if (data[data.length-1][0]!=result.time*1000) {
+        data.push([result.time*1000,parseFloat(result.value)]);
+      }
+            
+      if (data[1][0]<(start-20)) data.splice(0, 1);
+	  data.sort();
     }
-
-    function plot(){
+  
+    function plot()
+    {
       $.plot(graph,[{data: data, lines: { fill: true }}],
       {
-        series: { shadowSize: 0 },
-        xaxis: { tickLength:10, mode: "time", timezone: "browser", min: start, max: end }
+        xaxis: { mode: "time", timezone: "browser", min: start, max: end },
+        selection: { mode: "xy" }
       });
     }
 
+    //----------------------------------------------------------------------------------------------
     // Operate buttons
+    //----------------------------------------------------------------------------------------------
     $('.viewWindow').click(function () { 
       timeWindow = (1000 * $(this).attr("time") ); 
-      start = end-timeWindow;            //Get start time
-
-      var rate = 0;
-      if (timeWindow > 300*1000){ // > 5m
-        rate = timeWindow/120; 
-        fast_update_fps = 10;
-      } else { 
-        rate = timeWindow/60;
-        fast_update_fps = 20;
-      }
-      if (rate < 1800) rate = 1800; // limit max rate
-      clearInterval(timerget);
-      timerget = setInterval(getdp,rate); // change refresh rate
-      console.log("realtime timewindow " +timeWindow/1000 + "s get rate "+rate/1000 + "s");
-
-      interval = parseInt(((end*0.001+10) - (start*0.001-10)) / 800);
-      data = get_feed_data(feedid,(start-10000),(end+10000),interval,1,1);
+      
+      start = end-timeWindow;		//Get start time
+      
+      $.ajax({                                      
+        url: path+'feed/data.json',                         
+        data: "&apikey="+apikey+"&id="+feedid+"&start="+(start-20)+"&end="+(end+20)+"&dp="+1000,
+        dataType: 'json',
+        async: false,                      
+        success: function(data_in) { data = data_in; } 
+      }); 
     });
+    //-----------------------------------------------------------------------------------------------
+
     </script>
+
+  </body>
+</html>  

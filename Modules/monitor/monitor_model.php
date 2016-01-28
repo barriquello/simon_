@@ -207,17 +207,17 @@ class Monitor
     public function set_mysql($userid,$data)
     {
         $json = json_encode($data);
-        $result = $this->mysqli->query("SELECT `userid` FROM monitor WHERE `userid`='$userid'");
+        $result = $this->mysqli->query("SELECT `userid` FROM node WHERE `userid`='$userid'");
         if ($result->num_rows) {
-            $this->mysqli->query("UPDATE monitor SET `data`='$json' WHERE `userid`='$userid'");
+            $this->mysqli->query("UPDATE node SET `data`='$json' WHERE `userid`='$userid'");
         } else {
-            $this->mysqli->query("INSERT INTO monitor (`userid`,`data`) VALUES ('$userid','$json')");
+            $this->mysqli->query("INSERT INTO node (`userid`,`data`) VALUES ('$userid','$json')");
         }
     }
     
     public function get_mysql($userid)
     {
-        $result = $this->mysqli->query("SELECT `data` FROM monitor WHERE `userid`='$userid'");
+        $result = $this->mysqli->query("SELECT `data` FROM node WHERE `userid`='$userid'");
         if ($row = $result->fetch_array()) {
           return json_decode($row['data']);
         } else {

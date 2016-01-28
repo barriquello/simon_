@@ -28,9 +28,9 @@ Emoncms uses a front controller to route requests, modrewrite needs to be config
 
     $ sudo a2enmod rewrite
     
-For `<Directory />` and `<Directory /var/www/>` change `AllowOverride None` to `AllowOverride All`. This may be on lines 7 and 11 of `/etc/apache2/sites-available/default`. Modern versions of Ubuntu store these in the main config file: `/etc/apache2/apache2.conf`.
+For `<Directory />` and `<Directory /var/www/>` change `AllowOverride None` to `AllowOverride All`. This may be on lines 7 and 11 of `/etc/apache2/sites-available/000-default`. Modern versions of Ubuntu store these in the main config file: `/etc/apache2/apache2.conf`.
     
-    $ sudo nano /etc/apache2/sites-available/default
+    $ sudo nano /etc/apache2/sites-available/000-default
     
 or
 
@@ -60,9 +60,7 @@ Cd into www directory
 
 Download emoncms using git:
 
-**You may want to install one of the other branches of emoncms here, perhaps to try out a new feature set not yet available in the master branch. See the branch list and descriptions on the [start page](https://github.com/emoncms/emoncms)**
-
-    $ git clone git clone -b stable https://github.com/emoncms/emoncms.git
+    $ git clone https://github.com/emoncms/emoncms.git
     
 Once installed you can pull in updates with:
 
@@ -169,7 +167,7 @@ value (8000, 16000 should be fine).
 
 #### Enable Multi lingual support using gettext
 
-Follow the guide here step 4 onwards: [https://github.com/emoncms/emoncms/blob/master/docs/gettext.md](https://github.com/emoncms/emoncms/blob/master/docs/gettext.md#4-install-gettext)
+Follow the guide here step 4 onwards: [http://emoncms.org/site/docs/gettext](http://emoncms.org/site/docs/gettext)
 
 #### Configure PHP Timezone
 

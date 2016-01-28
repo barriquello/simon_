@@ -17,8 +17,7 @@ function bargraph(data,barwidth,mode)
   {
     bars: { show: true,align: "center",barWidth: (barwidth*1000),fill: true },
     grid: { show: true, hoverable: true, clickable: true },
-    xaxis: { mode: "time", timezone: "browser", minTickSize: [1, mode], tickLength: 1},
-    touch: { pan: "", scale: "", callback: function(){} }
+    xaxis: { mode: "time", timezone: "browser", minTickSize: [1, mode], tickLength: 1}
   });
 }
 
@@ -29,8 +28,7 @@ function instgraph(data)
     lines: { show: true, fill: true },
     grid: { show: true, hoverable: true },
     xaxis: { mode: "time" , timezone: "browser", min: start, max: end },
-    selection: { mode: "x"},
-    touch: { pan: "x", scale: "x" }
+    selection: { mode: "x"}
   });
 }
 

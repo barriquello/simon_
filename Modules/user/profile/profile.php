@@ -25,15 +25,21 @@ defined('EMONCMS_EXEC') or die('Restricted access');
     $languages= array_values($languages_new); 
     $languages_name= array_values($languages_name);
 
+
+function languagecode_to_name($lang){
     
-function languagecode_to_name($langs) {
-    static $lang_names = null;
-    if ($lang_names === null) {
-        $json_data = file_get_contents(__DIR__.'/language_country.json');
-        $lang_names = json_decode($json_data, true);
-    }
-    foreach ($langs as $key=>$val){
-      $lang[$key]=$lang_names[$val];
+    foreach ($lang as $key=>$val){
+      //echo $key.'-'.$val; 
+      switch($val) {
+              case 'cy_GB': $lang[$key]=_('Welsh (United Kingdom)'); break;
+              case 'da_DK': $lang[$key]=_('Danish (Denmark)'); break;
+              case 'en_EN': $lang[$key]=_('English'); break;
+              case 'es_ES': $lang[$key]=_('Spanish (Spain)'); break;
+              case 'fr_FR': $lang[$key]=_('French (France)'); break;
+              case 'it_IT': $lang[$key]=_('Italian (Italy)'); break;
+              case 'nl_BE': $lang[$key]=_('Dutch (Belgium)'); break;
+              case 'nl_NL': $lang[$key]=_('Dutch (Netherlands)'); break;
+      }
     }
    asort($lang);
    return $lang;
@@ -45,7 +51,8 @@ function languagecode_to_name($langs) {
 <script type="text/javascript" src="<?php echo $path; ?>Modules/user/user.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Lib/listjs/list.js"></script>
 
-<div class="row-fluid">
+<div class="row">
+
     <div class="span4">
         <h3><?php echo _('My account'); ?></h3>
 
@@ -98,20 +105,22 @@ function languagecode_to_name($langs) {
         <div class="account-item">
             <span class="muted"><?php echo _('Write API Key'); ?></span>
             <!--<a id="newapikeywrite" >new</a>-->
-            <span class="writeapikey"></span>
+            <input id="writeapikey" type="text" style="width:255px" readonly="readonly" />
         </div>
         <div class="account-item">
             <span class="muted"><?php echo _('Read API Key'); ?></span>
             <!--<a id="newapikeyread" >new</a>-->
-            <span class="readapikey"></span>
+            <input id="readapikey" type="text" style="width:255px" readonly="readonly" />
         </div>
         </div>
         
     </div>
+
     <div class="span8">
         <h3><?php echo _('My Profile'); ?></h3>
         <div id="table"></div>
     </div>
+
 </div>
 
 <script>
@@ -122,8 +131,8 @@ function languagecode_to_name($langs) {
 
     list.data = user.get();
 
-    $(".writeapikey").html(list.data.apikey_write);
-    $(".readapikey").html(list.data.apikey_read);
+    $("#writeapikey").val(list.data.apikey_write);
+    $("#readapikey").val(list.data.apikey_read);
     
     // Need to add an are you sure modal before enabling this.
     // $("#newapikeyread").click(function(){user.newapikeyread()});
@@ -136,14 +145,10 @@ function languagecode_to_name($langs) {
         'name':{'title':"<?php echo _('Name'); ?>", 'type':'text'},
         'location':{'title':"<?php echo _('Location'); ?>", 'type':'text'},
         'timezone':{'title':"<?php echo _('Timezone'); ?>", 'type':'timezone'},
-        'language':{'title':"<?php echo _('Language'); ?>", 'type':'language', 'options':lang, 'label':lang_name},
+        'language':{'title':"<?php echo _('Language'); ?>", 'type':'select', 'options':lang, 'label':lang_name},
         'bio':{'title':"<?php echo _('Bio'); ?>", 'type':'text'}
     }
-    
-    $.ajax({ url: path+"user/gettimezones.json", dataType: 'json', async: true, success: function(result) {
-        list.timezones = result;
-    }});
-    
+
     list.init();
 
     $("#table").bind("onSave", function(e){

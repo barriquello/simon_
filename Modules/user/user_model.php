@@ -14,22 +14,21 @@ defined('EMONCMS_EXEC') or die('Restricted access');
 
 class User
 {
+
     private $mysqli;
     private $rememberme;
     private $enable_rememberme = false;
     private $redis;
     private $log;
 
-    public function __construct($mysqli,$redis)
+    public function __construct($mysqli,$redis,$rememberme)
     {
         //copy the settings value, otherwise the enable_rememberme will always be false.
         global $enable_rememberme;
         $this->enable_rememberme = $enable_rememberme;
 
         $this->mysqli = $mysqli;
-
-        require "Modules/user/rememberme_model.php";
-        $this->rememberme = new Rememberme($mysqli);
+        $this->rememberme = $rememberme;
 
         $this->redis = $redis;
         $this->log = new EmonLogger(__FILE__);
@@ -53,42 +52,45 @@ class User
             $session['read'] = 1;
             $session['write'] = 1;
             $session['admin'] = 0;
+            $session['editmode'] = TRUE;
             $session['lang'] = "en"; // API access is always in english
-            $session['username'] = "API"; // TBD
         }
         else
         {
-            $result = $this->mysqli->query("SELECT id, username FROM users WHERE apikey_write='$apikey_in'");
+            $result = $this->mysqli->query("SELECT id FROM users WHERE apikey_write='$apikey_in'");
             if ($result->num_rows == 1)
             {
                 $row = $result->fetch_array();
                 if ($row['id'] != 0)
                 {
+                    //session_regenerate_id();
                     $session['userid'] = $row['id'];
                     $session['read'] = 1;
                     $session['write'] = 1;
                     $session['admin'] = 0;
+                    $session['editmode'] = TRUE;
                     $session['lang'] = "en"; // API access is always in english
-                    $session['username'] = $row['username'];
+
                     if ($this->redis) $this->redis->set("writeapikey:$apikey_in",$row['id']);
                 }
             }
             else
             {
-                $result = $this->mysqli->query("SELECT id, username FROM users WHERE apikey_read='$apikey_in'");
-                if ($result->num_rows == 1)
+            $result = $this->mysqli->query("SELECT id FROM users WHERE apikey_read='$apikey_in'");
+            if ($result->num_rows == 1)
+            {
+                $row = $result->fetch_array();
+                if ($row['id'] != 0)
                 {
-                    $row = $result->fetch_array();
-                    if ($row['id'] != 0)
-                    {
-                        $session['userid'] = $row['id'];
-                        $session['read'] = 1;
-                        $session['write'] = 0;
-                        $session['admin'] = 0;
-                        $session['lang'] = "en";  // API access is always in english
-                        $session['username'] = $row['username'];
-                    }
+                    //session_regenerate_id();
+                    $session['userid'] = $row['id'];
+                    $session['read'] = 1;
+                    $session['write'] = 0;
+                    $session['admin'] = 0;
+                    $session['editmode'] = TRUE;
+                    $session['lang'] = "en";  // API access is always in english
                 }
+            }
             }
         }
 
@@ -102,41 +104,33 @@ class User
 
         if ($this->enable_rememberme)
         {
-            if (isset($_SESSION['userid'])) {
-                // if session exists and was a remember me login and remember me cookie has expired
-                if ((isset($_SESSION['cookielogin']) && $_SESSION['cookielogin']==true) && !$this->rememberme->cookieIsValid($_SESSION['userid'])) {
-                    $this->logout();
+            // if php session exists
+            if (!empty($_SESSION['userid'])) {
+                // if rememberme emoncms cookie exists but is not valid then
+                // a valid cookie is a cookie who's userid, token and persistant token match a record in the db
+                if(!empty($_COOKIE[$this->rememberme->getCookieName()]) && !$this->rememberme->cookieIsValid($_SESSION['userid'])) {
+                $this->logout();
                 }
-            } else {
-                // No session exists, try remember me login
+            }
+            else
+            {
+
                 $loginresult = $this->rememberme->login();
                 if ($loginresult)
                 {
-                    // Remember me login
-                    $result = $this->mysqli->query("SELECT id,username,admin,language FROM users WHERE id = '$loginresult'");
-                    if ($result->num_rows < 1) {
-                        $this->logout(); // user id does not exist
-                    } else {
-                        $userData = $result->fetch_object();
-                        if ($userData->id != 0)
-                        {
-                            $_SESSION['userid'] = $userData->id;
-                            $_SESSION['username'] = $userData->username;
-                            $_SESSION['read'] = 1;
-                            $_SESSION['write'] = 1;
-                            //$_SESSION['admin'] = $userData->admin; // Admin mode requires user to login manualy
-                            $_SESSION['lang'] = $userData->language;
-                            // There is a chance that an attacker has stolen the login token, so we store
-                            // the fact that the user was logged in via RememberMe (instead of login form)
-                            $_SESSION['cookielogin'] = true;
-                        }
-                    }
+                // Remember me login
+                $_SESSION['userid'] = $loginresult;
+                $_SESSION['read'] = 1;
+                $_SESSION['write'] = 1;
+                // There is a chance that an attacker has stolen the login token, so we store
+                // the fact that the user was logged in via RememberMe (instead of login form)
+                $_SESSION['cookielogin'] = true;
                 }
                 else
                 {
-                    if($this->rememberme->loginTokenWasInvalid()) {
-                        $this->logout(); // Stolen
-                    }
+                if($this->rememberme->loginTokenWasInvalid()) {
+                    // Stolen
+                }
                 }
             }
         }
@@ -146,7 +140,7 @@ class User
         if (isset($_SESSION['write'])) $session['write'] = $_SESSION['write']; else $session['write'] = 0;
         if (isset($_SESSION['userid'])) $session['userid'] = $_SESSION['userid']; else $session['userid'] = 0;
         if (isset($_SESSION['lang'])) $session['lang'] = $_SESSION['lang']; else $session['lang'] = '';
-        if (isset($_SESSION['username'])) $session['username'] = $_SESSION['username']; else $session['username'] = 'REMEMBER_ME';
+        if (isset($_SESSION['username'])) $session['username'] = $_SESSION['username']; else $session['username'] = '';
         if (isset($_SESSION['cookielogin'])) $session['cookielogin'] = $_SESSION['cookielogin']; else $session['cookielogin'] = 0;
 
         return $session;
@@ -159,29 +153,27 @@ class User
         if (!$username || !$password || !$email) return array('success'=>false, 'message'=>_("Missing username, password or email parameter"));
 
         if (!ctype_alnum($username)) return array('success'=>false, 'message'=>_("Username must only contain a-z and 0-9 characters"));
-        
         $username = $this->mysqli->real_escape_string($username);
-        // $password = $this->mysqli->real_escape_string($password);
+        $password = $this->mysqli->real_escape_string($password);
 
         if ($this->get_id($username) != 0) return array('success'=>false, 'message'=>_("Username already exists"));
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return array('success'=>false, 'message'=>_("Email address format error"));
- 
-        if (strlen($username) < 3 || strlen($username) > 30) return array('success'=>false, 'message'=>_("Username length error"));
-        if (strlen($password) < 4 || strlen($password) > 250) return array('success'=>false, 'message'=>_("Password length error"));
+
+        if (strlen($username) < 4 || strlen($username) > 30) return array('success'=>false, 'message'=>_("Username length error"));
+        if (strlen($password) < 4 || strlen($password) > 30) return array('success'=>false, 'message'=>_("Password length error"));
 
         // If we got here the username, password and email should all be valid
 
         $hash = hash('sha256', $password);
-        $salt = md5(uniqid(mt_rand(), true));
-        $password = hash('sha256', $salt . $hash);
+        $string = md5(uniqid(mt_rand(), true));
+        $salt = substr($string, 0, 3);
+        $hash = hash('sha256', $salt . $hash);
 
         $apikey_write = md5(uniqid(mt_rand(), true));
         $apikey_read = md5(uniqid(mt_rand(), true));
 
-        $stmt = $this->mysqli->prepare("INSERT INTO users ( username, password, email, salt ,apikey_read, apikey_write, admin ) VALUES (?,?,?,?,?,?,0)");
-        $stmt->bind_param("ssssss", $username, $password, $email, $salt, $apikey_read, $apikey_write);
-        if (!$stmt->execute()) {
+        if (!$this->mysqli->query("INSERT INTO users ( username, password, email, salt ,apikey_read, apikey_write, admin ) VALUES ( '$username' , '$hash', '$email', '$salt', '$apikey_read', '$apikey_write', 0 );")) {
             return array('success'=>false, 'message'=>_("Error creating user"));
         }
 
@@ -200,12 +192,12 @@ class User
 
         // filter out all except for alphanumeric white space and dash
         //if (!ctype_alnum($username))
-        $username_out = preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username);
+        $username_out = preg_replace('/[^\w\s-]/','',$username);
 
         if ($username_out!=$username) return array('success'=>false, 'message'=>_("Username must only contain a-z 0-9 dash and underscore, if you created an account before this rule was in place enter your username without the non a-z 0-9 dash underscore characters to login and feel free to change your username on the profile page."));
 
         $username = $this->mysqli->real_escape_string($username);
-        //$password = $this->mysqli->real_escape_string($password);
+        $password = $this->mysqli->real_escape_string($password);
 
         $result = $this->mysqli->query("SELECT id,password,admin,salt,language FROM users WHERE username = '$username'");
 
@@ -227,6 +219,7 @@ class User
             $_SESSION['write'] = 1;
             $_SESSION['admin'] = $userData->admin;
             $_SESSION['lang'] = $userData->language;
+            $_SESSION['editmode'] = TRUE;
 
             if ($this->enable_rememberme) {
                 if ($remembermecheck==true) {
@@ -239,24 +232,24 @@ class User
             return array('success'=>true, 'message'=>_("Login successful"));
         }
     }
-
+    
     // Authorization API. returns user write and read apikey on correct username + password
     // This is useful for using emoncms with 3rd party applications
 
-    public function get_apikeys_from_login($username, $password)
+    public function get_apikeys_from_login($username, $password) 
     {
         if (!$username || !$password) return array('success'=>false, 'message'=>_("Username or password empty"));
-        $username_out = preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username);
+        $username_out = preg_replace('/[^\w\s-]/','',$username);
 
         if ($username_out!=$username) return array('success'=>false, 'message'=>_("Username must only contain a-z 0-9 dash and underscore"));
 
         $username = $this->mysqli->real_escape_string($username);
-        //$password = $this->mysqli->real_escape_string($password);
+        $password = $this->mysqli->real_escape_string($password);
 
         $result = $this->mysqli->query("SELECT id,password,admin,salt,language, apikey_write,apikey_read FROM users WHERE username = '$username'");
 
         if ($result->num_rows < 1) return array('success'=>false, 'message'=>_("Incorrect authentication"));
-
+     
         $userData = $result->fetch_object();
         $hash = hash('sha256', $userData->salt . hash('sha256', $password));
 
@@ -273,8 +266,11 @@ class User
     public function logout()
     {
         if ($this->enable_rememberme) $this->rememberme->clearCookie(true);
-        session_unset();
-        //session_regenerate_id(true);
+        $_SESSION['userid'] = 0;
+        $_SESSION['read'] = 0;
+        $_SESSION['write'] = 0;
+        $_SESSION['admin'] = 0;
+        session_regenerate_id(true);
         session_destroy();
     }
 
@@ -284,8 +280,8 @@ class User
         $old = $this->mysqli->real_escape_string($old);
         $new = $this->mysqli->real_escape_string($new);
 
-        if (strlen($old) < 4 || strlen($old) > 250) return array('success'=>false, 'message'=>_("Password length error"));
-        if (strlen($new) < 4 || strlen($new) > 250) return array('success'=>false, 'message'=>_("Password length error"));
+        if (strlen($old) < 4 || strlen($old) > 30) return array('success'=>false, 'message'=>_("Password length error"));
+        if (strlen($new) < 4 || strlen($new) > 30) return array('success'=>false, 'message'=>_("Password length error"));
 
         // 1) check that old password is correct
         $result = $this->mysqli->query("SELECT password, salt FROM users WHERE id = '$userid'");
@@ -296,9 +292,10 @@ class User
         {
             // 2) Save new password
             $hash = hash('sha256', $new);
-            $salt = md5(uniqid(rand(), true));
-            $password = hash('sha256', $salt . $hash);
-            $this->mysqli->query("UPDATE users SET password = '$password', salt = '$salt' WHERE id = '$userid'");
+            $string = md5(uniqid(rand(), true));
+            $salt = substr($string, 0, 3);
+            $hash = hash('sha256', $salt . $hash);
+            $this->mysqli->query("UPDATE users SET password = '$hash', salt = '$salt' WHERE id = '$userid'");
             return array('success'=>true);
         }
         else
@@ -306,13 +303,13 @@ class User
             return array('success'=>false, 'message'=>_("Old password incorect"));
         }
     }
-
-    public function passwordreset($username,$emailto)
+    
+    public function passwordreset($username,$email)
     {
-        $username_out = preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username);
-        if (!filter_var($emailto, FILTER_VALIDATE_EMAIL)) return array('success'=>false, 'message'=>_("Email address format error"));
+        $username_out = preg_replace('/[^\w\s-]/','',$username);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return array('success'=>false, 'message'=>_("Email address format error"));
 
-        $result = $this->mysqli->query("SELECT * FROM users WHERE `username`='$username_out' AND `email`='$emailto'");
+        $result = $this->mysqli->query("SELECT * FROM users WHERE `username`='$username_out' AND `email`='$email'");
 
         if ($result->num_rows==1)
         {
@@ -327,28 +324,42 @@ class User
 
                 // Hash and salt
                 $hash = hash('sha256', $newpass);
-                $salt = md5(uniqid(rand(), true));
-                $password = hash('sha256', $salt . $hash);
-
-                // Save password and salt
-                $this->mysqli->query("UPDATE users SET password = '$password', salt = '$salt' WHERE id = '$userid'");
+                $string = md5(uniqid(rand(), true));
+                $salt = substr($string, 0, 3);
+                $hash = hash('sha256', $salt . $hash);
+                
+                // Save hash and salt
+                $this->mysqli->query("UPDATE users SET password = '$hash', salt = '$salt' WHERE id = '$userid'");
 
                 //------------------------------------------------------------------------------
                 global $enable_password_reset;
                 if ($enable_password_reset==true)
                 {
-                    require "Lib/email.php";
-                    $email = new Email();
-                    //$email->from(from);
-                    $email->to($emailto);
-                    $email->subject('Emoncms password reset');
-                    $email->body("<p>A password reset was requested for your emoncms account.</p><p>You can now login with password: $newpass </p>");
-                    $result = $email->send();
-                    if (!$result['success']) {
-                        $this->log->error("Email send returned error. emailto=" + $emailto . " message='" . $result['message'] . "'");
-                    } else {
-                        $this->log->info("Email sent to $emailto");
+                    global $smtp_email_settings;
+
+                    // include SwiftMailer. One is the path from a PEAR install,
+                    // the other from libphp-swiftmailer.
+                    $have_swift = @include_once ("Swift/swift_required.php"); 
+                    if (!$have_swift) {
+                       $have_swift = @include_once ("swift_required.php");
                     }
+
+                    if (!$have_swift){
+                        $this->log->info("Could not include SwiftMailer from either possible path!");
+                        return array('success'=>false, 'message'=>"Could not find SwiftMailer - cannot proceed");
+                    }
+
+                    $transport = Swift_SmtpTransport::newInstance($smtp_email_settings['host'], 26)
+                    ->setUsername($smtp_email_settings['username'])->setPassword($smtp_email_settings['password']);
+
+                    $mailer = Swift_Mailer::newInstance($transport);
+                    $message = Swift_Message::newInstance()
+                      ->setSubject('Emoncms password reset')
+                      ->setFrom($smtp_email_settings['from'])
+                      ->setTo(array($email))
+                      ->setBody("<p>A password reset was requested for your emoncms account.</p><p>Your can now login with password: $newpass </p>", 'text/html');
+                    $result = $mailer->send($message);
+                    $this->log->info("Sent ".$result." email(s)");
                 }
                 //------------------------------------------------------------------------------
 
@@ -362,10 +373,10 @@ class User
 
     public function change_username($userid, $username)
     {
-        if (isset($_SESSION['cookielogin']) && $_SESSION['cookielogin']==true) return array('success'=>false, 'message'=>_("As you are using a cookie based remember me login, please logout and log back in to change username"));
+        if (isset($_SESSION['cookielogin']) && $_SESSION['cookielogin']==true) return array('success'=>false, 'message'=>_("As your using a cookie based remember me login, please logout and log back in to change username"));
 
         $userid = intval($userid);
-        if (strlen($username) < 3 || strlen($username) > 30) return array('success'=>false, 'message'=>_("Username length error"));
+        if (strlen($username) < 4 || strlen($username) > 30) return array('success'=>false, 'message'=>_("Username length error"));
 
         if (!ctype_alnum($username)) return array('success'=>false, 'message'=>_("Username must only contain a-z and 0-9 characters"));
 
@@ -384,15 +395,12 @@ class User
 
     public function change_email($userid, $email)
     {
-        if (isset($_SESSION['cookielogin']) && $_SESSION['cookielogin']==true) return array('success'=>false, 'message'=>_("As you are using a cookie based remember me login, please logout and log back in to change email"));
+        if (isset($_SESSION['cookielogin']) && $_SESSION['cookielogin']==true) return array('success'=>false, 'message'=>_("As your using a cookie based remember me login, please logout and log back in to change email"));
 
         $userid = intval($userid);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return array('success'=>false, 'message'=>_("Email address format error"));
 
-        $stmt = $this->mysqli->prepare("UPDATE users SET email = ? WHERE id = ?");
-        $stmt->bind_param("si", $email, $userid);
-        $stmt->execute();
-        
+        $this->mysqli->query("UPDATE users SET email = '$email' WHERE id = '$userid'");
         return array('success'=>true, 'message'=>_("Email updated"));
     }
 
@@ -414,14 +422,6 @@ class User
         $result = $this->mysqli->query("SELECT username FROM users WHERE id = '$userid';");
         $row = $result->fetch_array();
         return $row['username'];
-    }
-
-    public function get_email($userid)
-    {
-        $userid = intval($userid);
-        $result = $this->mysqli->query("SELECT email FROM users WHERE id = '$userid';");
-        $row = $result->fetch_array();
-        return $row['email'];
     }
 
     public function get_apikey_read($userid)
@@ -448,43 +448,12 @@ class User
         return $row['lang'];
     }
 
-    public function get_timezone_offset($userid)
-    {
-        $userid = intval($userid);
-        $result = $this->mysqli->query("SELECT timezone FROM users WHERE id = '$userid';");
-        $row = $result->fetch_object();
-        $now = new DateTime();
-        $now->setTimezone(new DateTimeZone($row->timezone));
-        return intval($now->getOffset()); // Will return seconds offset from GMT
-    }
-
     public function get_timezone($userid)
     {
         $userid = intval($userid);
         $result = $this->mysqli->query("SELECT timezone FROM users WHERE id = '$userid';");
-        $row = $result->fetch_array();
-        return $row['timezone'];
-    }
-
-    // List supported PHP timezones
-    public function get_timezones()
-    {
-        static $timezones = null;
-
-        if ($timezones === null) {
-            $timezones = array();
-            $now = new DateTime();
-
-            foreach (DateTimeZone::listIdentifiers() as $timezone) {
-                $now->setTimezone(new DateTimeZone($timezone));
-                $offset = $now->getOffset();
-                $hours = intval($offset / 3600);
-                $minutes = abs(intval($offset % 3600 / 60));
-                $gmt_offset_text = 'GMT ' . ($offset ? sprintf('%+03d:%02d', $hours, $minutes) : '+00:00');
-                $timezones[] =  array('id'=>$timezone, 'gmt_offset_secs'=>$offset, 'gmt_offset_text'=>$gmt_offset_text);
-            }
-        }
-        return $timezones;
+        $row = $result->fetch_object();
+        return intval($row->timezone);
     }
 
     public function get_salt($userid)
@@ -527,7 +496,7 @@ class User
     public function set_timezone($userid,$timezone)
     {
         $userid = intval($userid);
-        $timezone = preg_replace('/[^\w-.\\/_]/','',$timezone);
+        $timezone = intval($timezone);
         $this->mysqli->query("UPDATE users SET timezone = '$timezone' WHERE id='$userid'");
     }
 
@@ -548,12 +517,11 @@ class User
         // Validation
         $userid = intval($userid);
         $gravatar = preg_replace('/[^\w\s-.@]/','',$data->gravatar);
-        $name = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$data->name);
-        $location = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$data->location);
-        $timezone = preg_replace('/[^\w-.\\/_]/','',$data->timezone);
-        $bio = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$data->bio);
-        $language = preg_replace('/[^\w\s-.]/','',$data->language); 
-        $_SESSION['lang'] = $language;
+        $name = preg_replace('/[^\w\s-.]/','',$data->name);
+        $location = preg_replace('/[^\w\s-.]/','',$data->location);
+        $timezone = intval($data->timezone);
+        $language = preg_replace('/[^\w\s-.]/','',$data->language); $_SESSION['lang'] = $language;
+        $bio = preg_replace('/[^\w\s-.]/','',$data->bio);
 
         $result = $this->mysqli->query("UPDATE users SET gravatar = '$gravatar', name = '$name', location = '$location', timezone = '$timezone', language = '$language', bio = '$bio' WHERE id='$userid'");
     }
@@ -574,12 +542,5 @@ class User
         $apikey = md5(uniqid(mt_rand(), true));
         $this->mysqli->query("UPDATE users SET apikey_write = '$apikey' WHERE id='$userid'");
         return $apikey;
-    }
-
-    public function get_number_of_users()
-    {
-        $result = $this->mysqli->query("SELECT COUNT(*) FROM users");
-        $row = $result->fetch_row();
-        return $row[0];
     }
 }

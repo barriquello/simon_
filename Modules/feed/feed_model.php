@@ -1,4 +1,5 @@
 <?php
+
 /*
      All Emoncms code is released under the GNU Affero General Public License.
      See COPYRIGHT.txt and LICENSE.txt.
@@ -15,83 +16,82 @@ defined('EMONCMS_EXEC') or die('Restricted access');
 
 class Feed
 {
-    private $log;
     private $mysqli;
     private $redis;
-    private $settings;
-
+    public $engine;
+    private $histogram;
+    private $csvdownloadlimit_mb = 10;
+    private $log;
+    
+    // 5 years of daily data
+    private $max_npoints_returned = 1825;
 
     public function __construct($mysqli,$redis,$settings)
-    {
-        $this->log = new EmonLogger(__FILE__);
+    {        
         $this->mysqli = $mysqli;
         $this->redis = $redis;
-        $this->settings = $settings;
-    }
-
-
-    // Return instance of engine class, autoload when needed
-    public function EngineClass($e)
-    {
-        $e = (string)$e;
-        static $engines = array();
-        if (isset($engines[$e])) {
-            //$this->log->info("EngineClass() reused instance of '".get_class($engines[$e])."' id '".$e."'.");
-            return $engines[$e];
+        $this->log = new EmonLogger(__FILE__);
+        
+        // Load different storage engines
+        require "Modules/feed/engine/MysqlTimeSeries.php";
+        require "Modules/feed/engine/Timestore.php";
+        require "Modules/feed/engine/PHPTimestore.php";
+        require "Modules/feed/engine/Histogram.php";
+        require "Modules/feed/engine/PHPTimeSeries.php";
+        require "Modules/feed/engine/GraphiteTimeSeries.php";
+        
+        // Development engines
+        require "Modules/feed/engine/PHPFina.php";
+        require "Modules/feed/engine/PHPFiwa.php";     
+           
+        // Backwards compatibility 
+        if (!isset($settings)) $settings= array();
+        if (!isset($settings['timestore'])) {
+            global $timestore_adminkey; 
+            $settings['timestore'] = array('adminkey'=>$timestore_adminkey);
         }
-        else {
-            // Load different storage engines
-            if ($e == (string)Engine::MYSQL) {
-                    require "Modules/feed/engine/MysqlTimeSeries.php";  // Mysql engine
-                    $engines[$e] = new MysqlTimeSeries($this->mysqli);
-            } else if ($e == (string)Engine::VIRTUALFEED) {
-                    require "Modules/feed/engine/VirtualFeed.php";      // Takes care of Virtual Feeds
-                    $engines[$e] =  new VirtualFeed($this->mysqli,$this->redis,$this);
-            } else if ($e == (string)Engine::PHPFINA) {
-                    require "Modules/feed/engine/PHPFina.php";          // Fixed interval no averaging
-                    $engines[$e] =  new PHPFina($this->settings['phpfina']);
-            } else if ($e == (string)Engine::PHPFIWA) {
-                    require "Modules/feed/engine/PHPFiwa.php";          // Fixed interval with averaging
-                    $engines[$e] = new PHPFiwa($this->settings['phpfiwa']);
-            } else if ($e == (string)Engine::REDISBUFFER) {
-                    require "Modules/feed/engine/RedisBuffer.php";      // Redis buffer for low-write mode
-                    $engines[$e] = new RedisBuffer($this->redis,$this->settings['redisbuffer'],$this);
-            } else if ($e == (string)Engine::PHPTIMESERIES) {
-                    require "Modules/feed/engine/PHPTimeSeries.php";    // Variable interval no averaging
-                    $engines[$e] =  new PHPTimeSeries($this->settings['phptimeseries']);
-            } else if ($e == (string)Engine::MYSQLMEMORY) {
-                    require_once "Modules/feed/engine/MysqlTimeSeries.php";  // Mysql engine
-                    require "Modules/feed/engine/MysqlMemory.php";           // Mysql Memory engine
-                    $engines[$e] =  new MysqlMemory($this->mysqli);
-            } else if ($e == "histogram") {
-                    require "Modules/feed/engine/Histogram.php";        // Histogram, depends on mysql
-                    $engines[$e] = new Histogram($this->mysqli);
-            } else {
-                    $this->log->error("EngineClass() Engine id '".$e."' is not supported.");
-                    throw new Exception("ABORTED: Engine id '".$e."' is not supported.");
-            }
-            $this->log->info("EngineClass() Autoloaded new instance of '".get_class($engines[$e])."'.");
-            return $engines[$e];
+        if (!isset($settings['graphite'])) $settings['graphite'] = array('host'=>"", 'port'=>0);
+        if (!isset($settings['phpfiwa'])) $settings['phpfiwa'] = array();
+        if (!isset($settings['phpfina'])) $settings['phpfina'] = array();
+        if (!isset($settings['phptimestore'])) $settings['phptimestore'] = array();
+        if (!isset($settings['phptimeseries'])) $settings['phptimeseries'] = array();
+              
+        // Load engine instances to engine array to make selection below easier
+        $this->engine = array();
+        $this->engine[Engine::MYSQL] = new MysqlTimeSeries($mysqli);
+        $this->engine[Engine::TIMESTORE] = new Timestore($settings['timestore']);
+        $this->engine[Engine::PHPTIMESTORE] = new PHPTimestore($settings['phptimestore']);
+        $this->engine[Engine::PHPTIMESERIES] = new PHPTimeSeries($settings['phptimeseries']);
+        $this->engine[Engine::GRAPHITE] = new GraphiteTimeSeries($settings['graphite']);
+        $this->engine[Engine::PHPFINA] = new PHPFina($settings['phpfina']);
+        $this->engine[Engine::PHPFIWA] = new PHPFiwa($settings['phpfiwa']);
+                
+        $this->histogram = new Histogram($mysqli);
+        
+        if (isset($settings['csvdownloadlimit_mb'])) {
+            $this->csvdownloadlimit_mb = $settings['csvdownloadlimit_mb']; 
+        }
+        
+        if (isset($settings['max_npoints_returned'])) {
+            $this->max_npoints_returned = $settings['max_npoints_returned'];
         }
     }
 
-
-    /*
-    Configurations operations
-    create, delete, exist, update_user_feeds_size, get_buffer_size, get_meta
-    */
-    public function create($userid,$tag,$name,$datatype,$engine,$options_in)
+    public function create($userid,$name,$datatype,$engine,$options_in)
     {
         $userid = (int) $userid;
-        $name = preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$name);
-        $tag = preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$tag);
+        $name = preg_replace('/[^\w\s-:]/','',$name);
         $datatype = (int) $datatype;
         $engine = (int) $engine;
-
+        
         // Histogram engine requires MYSQL
         if ($datatype==DataType::HISTOGRAM && $engine!=Engine::MYSQL) $engine = Engine::MYSQL;
+        
+        // If feed of given name by the user already exists
+        $feedid = $this->get_id($userid,$name);
+        if ($feedid!=0) return array('success'=>false, 'message'=>'feed already exists');
 
-        $result = $this->mysqli->query("INSERT INTO feeds (userid,tag,name,datatype,public,engine) VALUES ('$userid','$tag','$name','$datatype',false,'$engine')");
+        $result = $this->mysqli->query("INSERT INTO feeds (userid,name,datatype,public,engine) VALUES ('$userid','$name','$datatype',false,'$engine')");
         $feedid = $this->mysqli->insert_id;
 
         if ($feedid>0)
@@ -104,29 +104,31 @@ class Feed
                     'userid'=>$userid,
                     'name'=>$name,
                     'datatype'=>$datatype,
-                    'tag'=>$tag,
+                    'tag'=>'',
                     'public'=>false,
                     'size'=>0,
                     'engine'=>$engine
                 ));
             }
-
+            
             $options = array();
+            if ($engine==Engine::TIMESTORE) $options['interval'] = (int) $options_in->interval;
+            if ($engine==Engine::PHPTIMESTORE) $options['interval'] = (int) $options_in->interval;
             if ($engine==Engine::PHPFINA) $options['interval'] = (int) $options_in->interval;
             if ($engine==Engine::PHPFIWA) $options['interval'] = (int) $options_in->interval;
-
+            
             $engineresult = false;
             if ($datatype==DataType::HISTOGRAM) {
-                $engineresult = $this->EngineClass("histogram")->create($feedid,$options);
+                $engineresult = $this->histogram->create($feedid,$options);
             } else {
-                $engineresult = $this->EngineClass($engine)->create($feedid,$options);
+                $engineresult = $this->engine[$engine]->create($feedid,$options);
             }
 
-            if ($engineresult !== true)
+            if ($engineresult == false)
             {
-                $this->log->warn("create() failed to create feed model feedid=$feedid");
+                $this->log->warn("Feed model: failed to create feed model feedid=$feedid");
                 // Feed engine creation failed so we need to delete the meta entry for the feed
-
+                
                 $this->mysqli->query("DELETE FROM feeds WHERE `id` = '$feedid'");
 
                 if ($this->redis) {
@@ -135,129 +137,68 @@ class Feed
                     $this->redis->srem("user:feeds:$userid",$feedid);
                 }
 
-                return array('success'=>false, 'message'=> $engineresult);
+                return array('success'=>false, 'message'=>"");
             }
-            $this->log->info("create() feedid=$feedid");
+
             return array('success'=>true, 'feedid'=>$feedid, 'result'=>$engineresult);
-        } else return array('success'=>false, 'result'=>"SQL returned invalid insert feed id");
+        } else return array('success'=>false);
     }
 
-    public function delete($feedid)
+    public function exist($id)
     {
-        $feedid = (int) $feedid;
-        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
-
-        $engine = $this->get_engine($feedid);
-
-        if ($this->settings['redisbuffer']['enabled']) {
-            // Call to buffer delete
-            $this->EngineClass(Engine::REDISBUFFER)->delete($feedid);
-        }
-
-        // Call to engine delete method
-        $this->EngineClass($engine)->delete($feedid);
-
-        $this->mysqli->query("DELETE FROM feeds WHERE `id` = '$feedid'");
-
-        if ($this->redis) {
-            $userid = $this->redis->hget("feed:$feedid",'userid');
-            $this->redis->del("feed:$feedid");
-            $this->redis->srem("user:feeds:$userid",$feedid);
-        }
-
-        if (isset($feed_exists_cache[$feedid])) { unset($feed_exists_cache[$feedid]); } // Clear static cache
-        if (isset($feed_engine_cache[$feedid])) { unset($feed_engine_cache[$feedid]); } // Clear static cache
-        $this->log->info("delete() feedid=$feedid");
-    }
-
-    public function exist($feedid)
-    {
-        //$this->log->info("exist() feedid=$feedid");
-        static $feed_exists_cache = array(); // Array to hold the cache
-        if (isset($feed_exists_cache[$feedid])) {
-            $feedexist = $feed_exists_cache[$feedid]; // Retrieve from static cache
-        } else {
-            $feedexist = false;
-            if ($this->redis) {
-                if (!$this->redis->exists("feed:$feedid")) {
-                    if ($this->load_feed_to_redis($feedid)) {
-                        $feedexist = true;
-                    }
-                } else {
+        $feedexist = false;
+        if ($this->redis)
+        {
+            
+            if (!$this->redis->exists("feed:$id")) {
+                if ($this->load_feed_to_redis($id))
+                {
                     $feedexist = true;
                 }
             } else {
-                $feedid = intval($feedid);
-                $result = $this->mysqli->query("SELECT id FROM feeds WHERE id = '$feedid'");
-                if ($result->num_rows>0) $feedexist = true;
+                $feedexist = true;
             }
-            $feed_exists_cache[$feedid] = $feedexist; // Cache it
+        }
+        else 
+        {
+            $id = intval($id);
+            $result = $this->mysqli->query("SELECT id FROM feeds WHERE id = '$id'");
+            if ($result->num_rows>0) $feedexist = true;
         }
         return $feedexist;
     }
 
-    // Update feed size and return total
-    public function update_user_feeds_size($userid)
+    public function get_id($userid,$name)
     {
-        $userid = (int) $userid;
-        $total = 0;
-        $result = $this->mysqli->query("SELECT id,engine FROM feeds WHERE `userid` = '$userid'");
-        while ($row = $result->fetch_array())
-        {
-            $size = 0;
-            $feedid = $row['id'];
-            $engine = $row['engine'];
-
-            // Call to engine get_feed_size method
-            $size = $this->EngineClass($engine)->get_feed_size($feedid);
-
-            $this->mysqli->query("UPDATE feeds SET `size` = '$size' WHERE `id`= '$feedid'");
-            if ($this->redis) $this->redis->hset("feed:$feedid",'size',$size);
-            $total += $size;
-        }
-        return $total;
+        $userid = intval($userid);
+        $name = preg_replace('/[^\w\s-:]/','',$name);
+        $result = $this->mysqli->query("SELECT id FROM feeds WHERE userid = '$userid' AND name = '$name'");
+        if ($result->num_rows>0) { $row = $result->fetch_array(); return $row['id']; } else return false;
     }
-
-    // Get REDISBUFFER date value elements pending save to a feed
-    public function get_buffer_size()
-    {
-        $total = 0;
-        if ($this->redis) {
-            $feedids = $this->redis->sMembers("feed:bufferactive");
-            foreach ($feedids as $feedid) {
-                $total += $this->EngineClass(Engine::REDISBUFFER)->get_feed_size($feedid);
-            }
-        }
-        return $total;
-    }
-
-    // Expose metadata from engines
-    public function get_meta($feedid) {
-        $feedid = (int) $feedid;
-        $engine = $this->get_engine($feedid);
-        return $this->EngineClass($engine)->get_meta($feedid);
-    }
-
-
     /*
-    Get operations by user
-    get_user_feeds         : all the feeds table data
-    get_user_public_feeds  : all the public feeds table data
-    get_user_feed_ids      : only the feeds id's
+
+    User Feed lists
+
+    Returns a specified user's feedlist in different forms:
+    get_user_feeds: 	all the feeds table data
+    get_user_feed_ids: 	only the id's
+    get_user_feed_names: 	id's and names
+
     */
+
     public function get_user_feeds($userid)
     {
         $userid = (int) $userid;
-
+        
         if ($this->redis) {
             $feeds = $this->redis_get_user_feeds($userid);
         } else {
             $feeds = $this->mysql_get_user_feeds($userid);
-        }
-
+        }    
+        
         return $feeds;
     }
-
+    
     public function get_user_public_feeds($userid)
     {
         $feeds = $this->get_user_feeds($userid);
@@ -265,44 +206,40 @@ class Feed
         foreach ($feeds as $feed) { if ($feed['public']) $publicfeeds[] = $feed; }
         return $publicfeeds;
     }
-
-    private function redis_get_user_feeds($userid)
+    
+    public function redis_get_user_feeds($userid)
     {
         $userid = (int) $userid;
         if (!$this->redis->exists("user:feeds:$userid")) $this->load_to_redis($userid);
-
+      
         $feeds = array();
         $feedids = $this->redis->sMembers("user:feeds:$userid");
         foreach ($feedids as $id)
         {
             $row = $this->redis->hGetAll("feed:$id");
+
             $lastvalue = $this->get_timevalue($id);
-            $row['time'] = $lastvalue['time'];
+            $row['time'] = strtotime($lastvalue['time']);
             $row['value'] = $lastvalue['value'];
             $feeds[] = $row;
         }
-
+        
         return $feeds;
     }
-
-    private function mysql_get_user_feeds($userid)
+    
+    public function mysql_get_user_feeds($userid)
     {
         $userid = (int) $userid;
         $feeds = array();
-        $result = $this->mysqli->query("SELECT id,name,userid,tag,datatype,public,size,engine,time,value,processList FROM feeds WHERE `userid` = '$userid'");
+        $result = $this->mysqli->query("SELECT * FROM feeds WHERE `userid` = '$userid'");
         while ($row = (array)$result->fetch_object())
         {
-            if ($row['engine'] == Engine::VIRTUALFEED) { //if virtual get it now
-                $this->log->info("mysql_get_user_feeds() calling VIRTUAL lastvalue " . $row['id']);
-                $lastvirtual = $this->EngineClass(Engine::VIRTUALFEED)->lastvalue($row['id']);
-                $row['time'] = $lastvirtual['time'];
-                $row['value'] = $lastvirtual['value'];
-            }
+            $row['time'] = strtotime($row['time']);
             $feeds[] = $row;
         }
         return $feeds;
     }
-
+    
     public function get_user_feed_ids($userid)
     {
         $userid = (int) $userid;
@@ -317,16 +254,12 @@ class Feed
         return $feedids;
     }
 
-
     /*
-    Get operations by feed id
-    get             : feed all fields
-    get_field       : feed specific field
-    get_timevalue   : feed last updated time and value
-    get_value       : feed last updated value
-    get_data        : feed data by time range
-    csv_export      : feed data by time range in csv format
+
+    Feeds table GET public functions
+
     */
+
     public function get($id)
     {
         $id = (int) $id;
@@ -335,14 +268,16 @@ class Feed
         if ($this->redis) {
             // Get from redis cache
             $row = $this->redis->hGetAll("feed:$id");
+            $lastvalue = $this->redis->hmget("feed:lastvalue:$id",array('time','value'));
+            $row['time'] = $lastvalue['time'];
+            $row['value'] = $lastvalue['value'];
         } else {
             // Get from mysql db
-            $result = $this->mysqli->query("SELECT id,name,userid,tag,datatype,public,size,engine,processList FROM feeds WHERE `id` = '$id'");
+            $result = $this->mysqli->query("SELECT * FROM feeds WHERE `id` = '$id'");
             $row = (array) $result->fetch_object();
+            $row['time'] = strtotime($row['time']);
         }
-        $lastvalue = $this->get_timevalue($id);
-        $row['time'] = $lastvalue['time'];
-        $row['value'] = $lastvalue['value'];
+
         return $row;
     }
 
@@ -354,19 +289,16 @@ class Feed
         if ($field!=NULL) // if the feed exists
         {
             $field = preg_replace('/[^\w\s-]/','',$field);
-         
-            if ($field=='time' || $field=='value') {
-                $lastvalue = $this->get_timevalue($id);
-                $val = $lastvalue[$field];
-            }
-            else if ($this->redis) {
+            
+            if ($this->redis) {
                 $val = $this->redis->hget("feed:$id",$field);
             } else {
                 $result = $this->mysqli->query("SELECT `$field` FROM feeds WHERE `id` = '$id'");
                 $row = $result->fetch_array();
                 $val = $row[0];
             }
-            return $val;
+            
+            if ($val) return $val; else return 0;
         }
         else return array('success'=>false, 'message'=>'Missing field parameter');
     }
@@ -374,38 +306,35 @@ class Feed
     public function get_timevalue($id)
     {
         $id = (int) $id;
-        //$this->log->info("get_timevalue() $id");
-        if (!$this->exist($id)) {
-            $this->log->error("get_timevalue() Feed '".$id."' does not exist.");
-            return null;
-        }
-        $engine = $this->get_engine($id);
 
-        if ($engine == Engine::VIRTUALFEED) { //if virtual get it now
-            $this->log->info("get_timevalue() calling VIRTUAL lastvalue $id");
-            $lastvirtual = $this->EngineClass(Engine::VIRTUALFEED)->lastvalue($id);
-            return array('time'=>$lastvirtual['time'], 'value'=>$lastvirtual['value']);
-        }
-
-        if ($this->redis)
+        // Get the timevalue from redis if it exists
+        if ($this->redis) 
         {
-            if ($this->redis->hExists("feed:$id",'time')) {
-                $lastvalue = $this->redis->hmget("feed:$id",array('time','value'));
-            } else {
-                // if it does not, load it in to redis from the actual feed data because we have no updated data from sql feeds table with redis enabled.
-                $lastvalue = $this->EngineClass($engine)->lastvalue($id);
-                $this->redis->hMset("feed:$id", array('time' => $lastvalue['time'],'value' => $lastvalue['value']));
+            if ($this->redis->exists("feed:lastvalue:$id"))
+            {
+                $lastvalue = $this->redis->hmget("feed:lastvalue:$id",array('time','value'));
+            }
+            else
+            {
+                // if it does not load it in to redis from the actual feed data.
+                $lastvalue = $this->get_timevalue_from_data($id);
+                $this->redis->hMset("feed:lastvalue:$id", array('value' => $lastvalue['value'], 'time' => $lastvalue['time']));
             }
         }
-        else
+        else 
         {
-            // must read last timestamp as if feed is daily last engine time is not last updated time but midnight
             $result = $this->mysqli->query("SELECT time,value FROM feeds WHERE `id` = '$id'");
             $row = $result->fetch_array();
-            if ($row) {
-                $lastvalue = array('time'=>$row['time'], 'value'=>$row['value']);
-            }
+            $lastvalue = array('time'=>$row['time'], 'value'=>$row['value']);
         }
+
+        return $lastvalue;
+    }
+
+    public function get_timevalue_seconds($id)
+    {
+        $lastvalue = $this->get_timevalue($id);
+        $lastvalue['time'] = strtotime($lastvalue['time']);
         return $lastvalue;
     }
 
@@ -415,77 +344,38 @@ class Feed
         return $lastvalue['value'];
     }
 
-    public function get_data($feedid,$start,$end,$outinterval,$skipmissing,$limitinterval)
+    public function get_timevalue_from_data($feedid)
     {
         $feedid = (int) $feedid;
-        if ($end<=$start) return array('success'=>false, 'message'=>"Request end time before start time");
         if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
+
         $engine = $this->get_engine($feedid);
-        if ($engine == Engine::VIRTUALFEED) {
-            $this->log->info("get_data() $feedid,$start,$end,$outinterval,$skipmissing,$limitinterval");
-        }
-
-        // Call to engine get_data
-        $data = $this->EngineClass($engine)->get_data($feedid,$start,$end,$outinterval,$skipmissing,$limitinterval);
-
-        if ($this->settings['redisbuffer']['enabled']) {
-            // Add redisbuffer cache if available
-            $bufferstart=end($data)[0];
-            $bufferdata = $this->EngineClass(Engine::REDISBUFFER)->get_data($feedid,$bufferstart,$end,$outinterval,$skipmissing,$limitinterval);
-            if (!empty($bufferdata)) {
-                $this->log->info("get_data() Buffer cache merged feedid=$feedid start=". reset($data)[0]/1000 ." end=". end($data)[0]/1000 ." bufferstart=". reset($bufferdata)[0]/1000 ." bufferend=". end($bufferdata)[0]/1000);
-                $data = array_merge($data, $bufferdata);
-            }
-        }
-
-        return $data;
+        
+        // Call to engine lastvalue method
+        return $this->engine[$engine]->lastvalue($feedid);
     }
-
-    public function csv_export($feedid,$start,$end,$outinterval,$datetimeformat)
-    {
-        $feedid = (int) $feedid;
-        if ($end<=$start) return array('success'=>false, 'message'=>"Request end time before start time");
-        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
-        $engine = $this->get_engine($feedid);
-
-        // Download limit
-        $downloadsize = (($end - $start) / $outinterval) * 17; // 17 bytes per dp
-        if ($downloadsize>($this->settings['csvdownloadlimit_mb']*1048576)) {
-            $this->log->warn("csv_export() CSV download limit exeeded downloadsize=$downloadsize feedid=$feedid");
-            return array('success'=>false, 'message'=>"CSV download limit exeeded downloadsize=$downloadsize");
-        }
-
-        if ($datetimeformat == 1) {
-            global $user,$session;
-            $usertimezone = $user->get_timezone($session['userid']);
-        } else {
-            $usertimezone = false;
-        }
-        // Call to engine csv_export method
-        return $this->EngineClass($engine)->csv_export($feedid,$start,$end,$outinterval,$usertimezone);
-    }
-
 
     /*
-    Write operations
-    set_feed_fields : set feed fields
-    set_timevalue   : set feed last value
-    insert_data     : insert current data
-    update_data     : update data at specified time
+
+    Feeds table SET public functions
+
     */
+
     public function set_feed_fields($id,$fields)
     {
         $id = (int) $id;
         if (!$this->exist($id)) return array('success'=>false, 'message'=>'Feed does not exist');
+
         $fields = json_decode(stripslashes($fields));
+
         $array = array();
 
         // Repeat this line changing the field name to add fields that can be updated:
-        if (isset($fields->name)) $array[] = "`name` = '".preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$fields->name)."'";
-        if (isset($fields->tag)) $array[] = "`tag` = '".preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$fields->tag)."'";
+        if (isset($fields->name)) $array[] = "`name` = '".preg_replace('/[^\w\s-:]/','',$fields->name)."'";
+        if (isset($fields->tag)) $array[] = "`tag` = '".preg_replace('/[^\w\s-:]/','',$fields->tag)."'";
         if (isset($fields->public)) $array[] = "`public` = '".intval($fields->public)."'";
 
-        // Convert to a comma separated string for the mysql query
+        // Convert to a comma seperated string for the mysql query
         $fieldstr = implode(",",$array);
         $this->mysqli->query("UPDATE feeds SET ".$fieldstr." WHERE `id` = '$id'");
 
@@ -501,38 +391,37 @@ class Feed
         }
     }
 
-    public function set_timevalue($id, $value, $time)
-    {
-        if ($value === null) $value = 'NULL'; // Null is a valid value
-        if ($this->redis) {
-            $this->redis->hMset("feed:$id", array('value' => $value, 'time' => $time));
-        } else {
-            $this->mysqli->query("UPDATE feeds SET `time` = '$time', `value` = $value WHERE `id`= '$id'");
-        }
-    }
+    /*
 
-    public function insert_data($feedid,$updatetime,$feedtime,$value,$arg=null)
+    Feed data public functions
+
+    insert, update, get and specialist histogram public functions
+
+    */
+
+    public function insert_data($feedid,$updatetime,$feedtime,$value)
     {
-        $this->log->info("insert_data() feedid=$feedid updatetime=$updatetime feedtime=$feedtime value=$value arg=$arg");
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
 
+        if ($feedtime == null) $feedtime = time();
         $updatetime = intval($updatetime);
-        if ($feedtime == null) $feedtime = $updatetime;
         $feedtime = intval($feedtime);
         $value = floatval($value);
 
         $engine = $this->get_engine($feedid);
-        if ($this->settings['redisbuffer']['enabled']) {
-            // Call to buffer post
-            $args = array('engine'=>$engine,'updatetime'=>$updatetime,'arg'=>$arg);
-            $this->EngineClass(Engine::REDISBUFFER)->post($feedid,$feedtime,$value,$args);
-        } else {
-            // Call to engine post
-            $this->EngineClass($engine)->post($feedid,$feedtime,$value,$arg);
-        }
+        
+        // Call to engine post method
+        $this->engine[$engine]->post($feedid,$feedtime,$value);
 
         $this->set_timevalue($feedid, $value, $updatetime);
+
+        //Check feed event if event module is installed
+        if (is_dir(realpath(dirname(__FILE__)).'/../event/')) {
+            require_once(realpath(dirname(__FILE__)).'/../event/event_model.php');
+            $event = new Event($this->mysqli,$this->redis);
+            $event->check_feed_event($feedid,$updatetime,$feedtime,$value);
+        }
 
         return $value;
     }
@@ -542,113 +431,234 @@ class Feed
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
 
+        if ($feedtime == null) $feedtime = time();
         $updatetime = intval($updatetime);
-        if ($feedtime == null) $feedtime = $updatetime;
         $feedtime = intval($feedtime);
         $value = floatval($value);
 
         $engine = $this->get_engine($feedid);
-        if ($this->settings['redisbuffer']['enabled']) {
-            // Call to buffer update
-            $args = array('engine'=>$engine,'updatetime'=>$updatetime);
-            $this->EngineClass(Engine::REDISBUFFER)->update($feedid,$feedtime,$value,$args);
-        } else {
-            // Call to engine update
-            $this->EngineClass($engine)->update($feedid,$feedtime,$value);
-        }
+        
+        // Call to engine update method
+        $value = $this->engine[$engine]->update($feedid,$feedtime,$value);
+       
+        // need to find a way to not update if value being updated is older than the last value
+        // in the database, redis lastvalue is last update time rather than last datapoint time.
+        // So maybe we need to store both in redis.
 
         $this->set_timevalue($feedid, $value, $updatetime);
+
+        //Check feed event if event module is installed
+        if (is_dir(realpath(dirname(__FILE__)).'/../event/')) {
+            require_once(realpath(dirname(__FILE__)).'/../event/event_model.php');
+            $event = new Event($this->mysqli,$this->redis);
+            $event->check_feed_event($feedid,$updatetime,$feedtime,$value);
+        }
 
         return $value;
     }
 
+    public function get_data($feedid,$start,$end,$dp)
+    {
+        $feedid = (int) $feedid;
+        if ($end == 0) $end = time()*1000;
+                
+        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
+  
+        $engine = $this->get_engine($feedid);
+        
+        // Call to engine get_data method
+        $range = ($end - $start) * 0.001;
+        if ($dp>$this->max_npoints_returned) $dp = $this->max_npoints_returned;
+        if ($dp<1) $dp = 1;
+        $outinterval = round($range / $dp);
+        return $this->engine[$engine]->get_data($feedid,$start,$end,$outinterval);
 
+    }
+
+    public function get_average($feedid,$start,$end,$outinterval)
+    {
+        $feedid = (int) $feedid;
+        if ($end == 0) $end = time()*1000;
+        
+        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
+
+        $engine = $this->get_engine($feedid);
+
+        // Call to engine get_average method
+        if ($outinterval<1) $outinterval = 1;
+        $range = ($end - $start) * 0.001;
+        $npoints = ($range / $outinterval);
+        if ($npoints>$this->max_npoints_returned) $outinterval = round($range / $this->max_npoints_returned);
+        return $this->engine[$engine]->get_data($feedid,$start,$end,$outinterval);
+    }
+    
+    public function get_history($feedid,$start,$end,$outinterval)
+    {
+        $feedid = (int) $feedid;
+        if ($end == 0) $end = time()*1000;
+        
+        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
+
+        $engine = $this->get_engine($feedid);
+        
+        if ($engine==Engine::PHPFINA || $engine==Engine::PHPFIWA) {
+            // Call to engine get_average method
+            if ($outinterval<1) $outinterval = 1;
+            $range = ($end - $start) * 0.001;
+            $npoints = ($range / $outinterval);
+            if ($npoints>$this->max_npoints_returned) $outinterval = round($range / $this->max_npoints_returned);
+            return $this->engine[$engine]->get_data_exact($feedid,$start,$end,$outinterval);
+        }
+        return false;
+    }
+    
+    public function csv_export($feedid,$start,$end,$outinterval)
+    {
+        $feedid = (int) $feedid;
+        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
+
+        $engine = $this->get_engine($feedid);
+        
+        // Download limit
+        $downloadsize = (($end - $start) / $outinterval) * 17; // 17 bytes per dp
+        if ($downloadsize>($this->csvdownloadlimit_mb*1048576)) {
+            $this->log->warn("Feed model: csv download limit exeeded downloadsize=$downloadsize feedid=$feedid");
+            return false;
+        }
+
+        // Call to engine get_average method
+        return $this->engine[$engine]->csv_export($feedid,$start,$end,$outinterval);
+    }
+
+
+    public function delete($feedid)
+    {
+        $feedid = (int) $feedid;
+        if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
+
+        $engine = $this->get_engine($feedid);
+        
+        // Call to engine delete method
+        $this->engine[$engine]->delete($feedid);
+
+        $this->mysqli->query("DELETE FROM feeds WHERE `id` = '$feedid'");
+
+        if ($this->redis) {
+            $userid = $this->redis->hget("feed:$feedid",'userid');
+            $this->redis->del("feed:$feedid");
+            $this->redis->srem("user:feeds:$userid",$feedid);
+        }
+    }
+
+    public function update_user_feeds_size($userid)
+    {
+        $userid = (int) $userid;
+        $total = 0;
+        $result = $this->mysqli->query("SELECT id,engine FROM feeds WHERE `userid` = '$userid'");
+        while ($row = $result->fetch_array())
+        {
+            $size = 0;
+            $feedid = $row['id'];
+            $engine = $row['engine'];
+            
+            // Call to engine get_feed_size method
+            $size = $this->engine[$engine]->get_feed_size($feedid);
+            
+            $this->mysqli->query("UPDATE feeds SET `size` = '$size' WHERE `id`= '$feedid'");
+            if ($this->redis) $this->redis->hset("feed:$feedid",'size',$size);
+            $total += $size;
+        }
+        return $total;
+    }
+
+    public function get_meta($feedid) {
+        $feedid = (int) $feedid;
+        $engine = $this->get_engine($feedid);
+        return $this->engine[$engine]->get_meta($feedid);
+    }
+    
     // MysqlTimeSeries specific functions that we need to make available to the controller
+
     public function mysqltimeseries_export($feedid,$start) {
-        return $this->EngineClass(Engine::MYSQL)->export($feedid,$start);
+        return $this->engine[Engine::MYSQL]->export($feedid,$start);
     }
 
     public function mysqltimeseries_delete_data_point($feedid,$time) {
-        return $this->EngineClass(Engine::MYSQL)->delete_data_point($feedid,$time);
+        return $this->engine[Engine::MYSQL]->delete_data_point($feedid,$time);
     }
 
     public function mysqltimeseries_delete_data_range($feedid,$start,$end) {
-        return $this->EngineClass(Engine::MYSQL)->delete_data_range($feedid,$start,$end);
+        return $this->engine[Engine::MYSQL]->delete_data_range($feedid,$start,$end);
     }
 
+    // Timestore specific functions that we need to make available to the controller
+
+    public function timestore_export($feedid,$start,$layer) {
+        return $this->engine[Engine::TIMESTORE]->export($feedid,$start,$layer);
+    }
+
+    public function timestore_export_meta($feedid) {
+        return $this->engine[Engine::TIMESTORE]->export_meta($feedid);
+    }
+
+    public function timestore_scale_range($feedid,$start,$end,$value) {
+        return $this->engine[Engine::TIMESTORE]->scale_range($feedid,$start,$end,$value);
+    }
 
     // Histogram specific functions that we need to make available to the controller
+
     public function histogram_get_power_vs_kwh($feedid,$start,$end) {
-        return $this->EngineClass("histogram")->get_power_vs_kwh($feedid,$start,$end);
+        return $this->histogram->get_power_vs_kwh($feedid,$start,$end);
     }
 
     public function histogram_get_kwhd_atpower($feedid, $min, $max) {
-        return $this->EngineClass("histogram")->get_kwhd_atpower($feedid, $min, $max);
+        return $this->histogram->get_kwhd_atpower($feedid, $min, $max);
     }
 
     public function histogram_get_kwhd_atpowers($feedid, $points) {
-        return $this->EngineClass("histogram")->get_kwhd_atpowers($feedid, $points);
+        return $this->histogram->get_kwhd_atpowers($feedid, $points);
     }
-
 
     // PHPTimeSeries specific functions that we need to make available to the controller
+
     public function phptimeseries_export($feedid,$start) {
-        return $this->EngineClass(Engine::PHPTIMESERIES)->export($feedid,$start);
+        return $this->engine[Engine::PHPTIMESERIES]->export($feedid,$start);
     }
-
+    
     public function phpfiwa_export($feedid,$start,$layer) {
-        return $this->EngineClass(Engine::PHPFIWA)->export($feedid,$start,$layer);
+        return $this->engine[Engine::PHPFIWA]->export($feedid,$start,$layer);
     }
-
+    
     public function phpfina_export($feedid,$start) {
-        return $this->EngineClass(Engine::PHPFINA)->export($feedid,$start);
+        return $this->engine[Engine::PHPFINA]->export($feedid,$start);
     }
 
 
-    /*
-     Processlist functions
-    */
-    // USES: redis feed
-    public function get_processlist($id)
-    {
-        // LOAD REDIS
-        $id = (int) $id;
 
+    public function set_timevalue($feedid, $value, $time)
+    {
+        $updatetime = date("Y-n-j H:i:s", $time);
         if ($this->redis) {
-            if (!$this->redis->exists("feed:$id")) $this->load_feed_to_redis($id);
-            return $this->redis->hget("feed:$id",'processList');
+            $this->redis->hMset("feed:lastvalue:$feedid", array('value' => $value, 'time' => $updatetime));
         } else {
-            $result = $this->mysqli->query("SELECT processList FROM feeds WHERE `id` = '$id'");
-            $row = $result->fetch_array();
-            if (!$row['processList']) $row['processList'] = "";
-            return $row['processList'];
+            $this->mysqli->query("UPDATE feeds SET `time` = '$updatetime', `value` = '$value' WHERE `id`= '$feedid'");
+        }
+    }
+    
+    private function get_engine($feedid)
+    {
+        if ($this->redis) {
+            return $this->redis->hget("feed:$feedid",'engine');
+        } else {
+            $result = $this->mysqli->query("SELECT engine FROM feeds WHERE `id` = '$feedid'");
+            $row = $result->fetch_object();
+            return $row->engine;
         }
     }
 
-    // USES: redis feed
-    public function set_processlist($id, $processlist)
+    public function load_to_redis($userid)
     {
-        $this->mysqli->query("UPDATE feeds SET processList = '$processlist' WHERE id='$id'");
-        if ($this->mysqli->affected_rows>0){
-            // CHECK REDIS
-            if ($this->redis) $this->redis->hset("feed:$id",'processList',$processlist);
-            return array('success'=>true, 'message'=>'Feed processlist updated');
-        } else {
-            return array('success'=>false, 'message'=>'Feed processlist was not updated');
-        }
-    }
-
-    public function reset_processlist($id)
-    {
-        $id = (int) $id;
-        return $this->set_processlist($id, "");
-    }
-
-
-    /* Redis helpers */
-    private function load_to_redis($userid)
-    {
-        $result = $this->mysqli->query("SELECT id,userid,name,datatype,tag,public,size,engine,processList FROM feeds WHERE `userid` = '$userid'");
+        $result = $this->mysqli->query("SELECT id,userid,name,datatype,tag,public,size,engine FROM feeds WHERE `userid` = '$userid'");
         while ($row = $result->fetch_object())
         {
             $this->redis->sAdd("user:feeds:$userid", $row->id);
@@ -660,20 +670,21 @@ class Feed
             'tag'=>$row->tag,
             'public'=>$row->public,
             'size'=>$row->size,
-            'engine'=>$row->engine,
-            'processList'=>$row->processList
+            'engine'=>$row->engine
             ));
         }
     }
 
-    private function load_feed_to_redis($id)
+    public function load_feed_to_redis($id)
     {
-        $result = $this->mysqli->query("SELECT id,userid,name,datatype,tag,public,size,engine,processList FROM feeds WHERE `id` = '$id'");
+        $result = $this->mysqli->query("SELECT id,userid,name,datatype,tag,public,size,engine FROM feeds WHERE `id` = '$id'");
         $row = $result->fetch_object();
+
         if (!$row) {
             $this->log->warn("Feed model: Requested feed does not exist feedid=$id");
             return false;
         }
+
         $this->redis->hMSet("feed:$row->id",array(
             'id'=>$row->id,
             'userid'=>$row->userid,
@@ -682,30 +693,10 @@ class Feed
             'tag'=>$row->tag,
             'public'=>$row->public,
             'size'=>$row->size,
-            'engine'=>$row->engine,
-            'processList'=>$row->processList
+            'engine'=>$row->engine
         ));
+
         return true;
-    }
-
-
-    /* Other helpers */
-    private function get_engine($feedid)
-    {
-        static $feed_engine_cache = array(); // Array to hold the cache
-        if (isset($feed_engine_cache[$feedid])) {
-            $engine = $feed_engine_cache[$feedid]; // Retrieve from static cache
-        } else {
-            if ($this->redis) {
-                $engine = $this->redis->hget("feed:$feedid",'engine');
-            } else {
-                $result = $this->mysqli->query("SELECT engine FROM feeds WHERE `id` = '$feedid'");
-                $row = $result->fetch_object();
-                $engine = $row->engine;
-            }
-            $feed_engine_cache[$feedid] = $engine; // Cache it
-        }
-        return $engine;
     }
 }
 

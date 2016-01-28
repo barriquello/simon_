@@ -6,14 +6,9 @@ var processlist_ui =
     variableid: 0,
     monitorid: 10,
     
-	contexttype: 0,         // Editor type (0:input, 1:feed/virtual)
-    contextid: 0,           // The current inputid or virtual feed id being edited
-    contextprocesslist: [], // The current process list being edited
-  
     processlist: [],
     feedlist:[],
     inputlist:[],
-		
     
     enable_mysql_all: false,
 
@@ -151,10 +146,7 @@ var processlist_ui =
         $("#processlist-ui").on('change',"#feed-engine",function(){
             var engine = $(this).val();
             $("#feed-interval").hide();
-            if (engine==6 || engine==5 || engine==4 || engine==1) $("#feed-interval").show();      
-			  var processid = $("#process-select").val();
-			  var datatype = processlist_ui.processlist[processid][4]; // 1:REALTIME, 2:DAILY, 3:HISTOGRAM
-	  
+            if (engine==6 || engine==5 || engine==4 || engine==1) $("#feed-interval").show();
         });
 
         $("#processlist-ui").on('click','#process-add',function() 
@@ -162,9 +154,8 @@ var processlist_ui =
             console.log("Process_add");
             var processid = $('#process-select').val();
             var process = processlist_ui.processlist[processid];
-            var arg = '';            	
-				
-			console.log(process);	
+            var arg = '';
+            
             // Type: value (scale, offset)
             if (process[1]==0) arg = $("#value-input").val();
             
@@ -176,15 +167,12 @@ var processlist_ui =
             {
                 var feedid = $("#feed-select").val();
               
-			    console.log("Datatype_engine");
-			  
                 if (feedid==-1) 
                 {
                     var feedname = $('#feed-name').val();
                     var engine = $('#feed-engine').val();
                     var datatype = process[4];
-                    var feedtag = $('#new-feed-tag').val();
-					
+                    
                     var options = {};
                     if (datatype==2) { 
                         options = {interval:3600*24};
@@ -197,10 +185,7 @@ var processlist_ui =
                         return false;
                     }
                     
-					console.log(datatype+" "+engine);
-					
-					var result = feed.create(feedtag,feedname,datatype,engine,options);
-                    //var result = feed.create(feedname,datatype,engine,options);
+                    var result = feed.create(feedname,datatype,engine,options);
                     feedid = result.feedid;
                 
                     if (!result.success || feedid<1) {
@@ -208,10 +193,7 @@ var processlist_ui =
                         return false;
                     }
                     
-                    //processlist_ui.feedlist = feed.list_assoc();
-					
-					processlist_ui.feedlist[feedid] = {'id':feedid, 'name':feedname,'value':'n/a','tag':feedtag,'datatype':datatype};
-					processlist_ui.showfeedoptions(processid);  // Refresh Feedlist
+                    processlist_ui.feedlist = feed.list_assoc();
                 }
                 arg = feedid;
 
@@ -220,7 +202,7 @@ var processlist_ui =
             
             //if (arg!="") 
             //{
-                console.log(processid+" "+arg);				
+                console.log(processid+" "+arg);
                 processlist_ui.variableprocesslist.push([processid,arg]);
                 processlist_ui.monitors[processlist_ui.monitorid].decoder.variables[processlist_ui.variableid].processlist = processlist_ui.encode(processlist_ui.variableprocesslist);
                 monitor.setdecoder(processlist_ui.monitorid,processlist_ui.monitors[processlist_ui.monitorid].decoder);
@@ -229,9 +211,7 @@ var processlist_ui =
                 //    alert(data.message);
                 //    return false;
                 //}
-				processlist_ui.contextprocesslist.push([processid,""+arg]);
                 processlist_ui.draw();
-				processlist_ui.modified();
             //}
         });
 
@@ -345,21 +325,6 @@ var processlist_ui =
         }
     
     },
-	
-	'modified':function(){
-		$("#save-processlist").attr('class','btn btn-warning').text("Changed, press to save");
-	  },
-
-	  'saved':function(){
-		$("#save-processlist").attr('class','btn btn-success').text("Saved");
-		// Update context table immedietly
-		for (z in table.data) {
-		  if (table.data[z].id == processlist_ui.contextid) {
-			table.data[z].processList = processlist_ui.encode(processlist_ui.contextprocesslist);
-		  }
-		}
-		table.draw();
-	  },
 
     // Process list functions
     'decode':function(str)
@@ -500,29 +465,6 @@ var processlist_ui =
       }
       
       return out;
-    }, 
-	
-	'load': function(contextid,contextprocesslist,contextname,newfeedname,newfeedtag){
-    this.contextid = contextid;
-    this.contextprocesslist = contextprocesslist;
-    $("#contextname").html(contextname);
-    $("#new-feed-name").val(newfeedname);
-    $("#new-feed-tag").val(newfeedtag);
-    this.draw();
-    $("#save-processlist").attr('class','btn btn-success').text("Not modified");
-    $("#processlist-ui #process-select").change(); // Force a refresh
-    $("#processlistModal").modal('show');          // Show
-    this.adjustmodal();
-  },
-
-  'adjustmodal':function() {
-    if ($("#processlistModal").length) {
-      var h = $(window).height() - $("#processlistModal").position().top - 180;
-      $("#processlist-ui").height(h);
-    }
-  }
-
-
-	
+    }    
     
 }

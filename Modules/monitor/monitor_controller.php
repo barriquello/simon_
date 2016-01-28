@@ -10,16 +10,16 @@ function monitor_controller()
     
     if (!isset($session['read'])) return array('content'=>$result);
 
-    require_once "Modules/feed/feed_model.php";
+    include "Modules/feed/feed_model.php";
     $feed = new Feed($mysqli,$redis,$feed_settings);
 
-    require_once "Modules/input/input_model.php"; // 295
+    require "Modules/input/input_model.php"; // 295
     $input = new Input($mysqli,$redis, $feed);
 
-    require_once "Modules/process/process_model.php"; // 886    
-	$process = new Process($mysqli,$input,$feed,$user->get_timezone($session['userid']));
-	//$process = new Process($mysqli,$input,$feed);
-    //$process->set_timezone_offset($user->get_timezone($session['userid']));
+    require "Modules/input/process_model.php"; // 886    
+	//$process = new Process($mysqli,$input,$feed,$user->get_timezone($session['userid']));
+	$process = new Process($mysqli,$input,$feed);
+    $process->set_timezone_offset($user->get_timezone($session['userid']));
 
     include "Modules/monitor/monitor_model.php";
     $monitor = new Monitor($mysqli,$redis,$process);
@@ -79,7 +79,11 @@ function monitor_controller()
                         $monitorid = $item[1];
                         
                         $bytevalues = array();
-                        for ($i=2; $i<count($item); $i++) $bytevalues[] = (int) $item[$i];
+						$bytevalues[0] = (int)(($time>>0) & 255);
+						$bytevalues[1] = (int)(($time>>8) & 255);
+						$bytevalues[2] = (int)(($time>>16) & 255);
+						$bytevalues[3] = (int)(($time>>24) & 255);
+                        for ($i=2; $i<count($item); $i++) $bytevalues[$i+2] = (int) $item[$i];
                         
                         $result = $monitor->set($session['userid'],$monitorid,$time,$bytevalues);
                     }

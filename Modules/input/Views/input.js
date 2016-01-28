@@ -33,17 +33,17 @@ var input = {
 
     // Process
 
-    'set_process':function(inputid,processlist)
+    'add_process':function(inputid,processid,arg)
     {
         var result = {};
-        $.ajax({ url: path+"input/process/set.json?inputid="+inputid, method: "POST", data: "processlist="+processlist, async: false, success: function(data){result = data;} });
+        $.ajax({ url: path+"input/process/add.json", data: "inputid="+inputid+"&processid="+processid+"&arg="+arg, async: false, success: function(data){result = data;} });
         return result;
     },
 
-    'get_process':function(inputid)
+    'processlist':function(inputid)
     {
         var result = {};
-        $.ajax({ url: path+"input/process/get.json", data: "inputid="+inputid, async: false, dataType: 'json', success: function(data){result = data;} });
+        $.ajax({ url: path+"input/process/list.json", data: "inputid="+inputid, async: false, dataType: 'json', success: function(data){result = data;} });
         var processlist = [];
         if (result!="")
         {
@@ -57,7 +57,28 @@ var input = {
         return processlist;
     },
 
-    'reset_processlist':function(inputid,processid)
+    'getallprocesses':function(inputid)
+    {
+        var result = {};
+        $.ajax({ url: path+"input/getallprocesses.json", data: "inputid="+inputid, async: false, dataType: 'json', success: function(data){result = data;} });
+        return result;
+    },
+
+    'delete_process':function(inputid,processid)
+    {
+        var result = {};
+        $.ajax({ url: path+"input/process/delete.json", data: "inputid="+inputid+"&processid="+processid, async: false, success: function(data){result = data;} });
+        return result;
+    },
+
+    'move_process':function(inputid,processid,moveby)
+    {
+        var result = {};
+        $.ajax({ url: path+"input/process/move.json", data: "inputid="+inputid+"&processid="+processid+"&moveby="+moveby, async: false, success: function(data){result = data;} });
+        return result;
+    },
+
+    'reset_processlist':function(inputid,processid,moveby)
     {
         var result = {};
         $.ajax({ url: path+"input/process/reset.json", data: "inputid="+inputid, async: false, success: function(data){result = data;} });

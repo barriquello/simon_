@@ -24,8 +24,8 @@ class Multigraph
     public function create($userid)
     {
         $userid = intval($userid);
-        $this->mysqli->query("INSERT INTO multigraph (`userid`,`feedlist`, `name`) VALUES ('$userid','', 'New Multigraph')");
-        return $this->mysqli->insert_id;
+        $this->mysqli->query("INSERT INTO multigraph (`userid`,`feedlist`) VALUES ('$userid','')");
+        return $this->mysqli->insert_id;  
     }
 
     public function delete($id,$userid)
@@ -39,13 +39,8 @@ class Multigraph
         $id = intval($id);
         $userid = intval($userid);
         $feedlist = preg_replace('/[^\w\s-.",:{}\[\]]/','',$feedlist);
-        $name = preg_replace('/[^\p{L}_\p{N}\s-.]/u','',$name);
+        $name = preg_replace('/[^\w\s-.]/','',$name);
         $this->mysqli->query("UPDATE multigraph SET `name` = '$name', `feedlist` = '$feedlist' WHERE `id`='$id' AND `userid`='$userid'");
-        if ($this->mysqli->affected_rows>0){
-            return array('success'=>true, 'message'=>'Multigraph updated');
-        } else {
-            return array('success'=>false, 'message'=>'Multigraph was not updated');
-        }
     }
 
     /*
@@ -56,12 +51,10 @@ class Multigraph
     {
         $id = intval($id);
         $userid = intval($userid);
-        $result = $this->mysqli->query("SELECT name, feedlist FROM multigraph WHERE `id`='$id'");
+        $result = $this->mysqli->query("SELECT feedlist FROM multigraph WHERE `id`='$id'");
         $result = $result->fetch_array();
-        if (!$result) return array('success'=>false, 'message'=>'Multigraph does not exist');
-        $row['name'] = $result['name'];
-        $row['feedlist'] = json_decode($result['feedlist']);
-        return $row;
+        $feedlist = json_decode($result['feedlist']);
+        return $feedlist;
     }
 
     public function getlist($userid)
@@ -76,5 +69,17 @@ class Multigraph
         }
         return $multigraphs;
     }
-
+    
+    /*
+    userid not used
+    need to implement public multigraph feature, only return feedlist if multigraph is public or user session
+    */
+    public function getname($id, $userid)
+    {
+        $id = intval($id);
+        $userid = intval($userid);
+        $result = $this->mysqli->query("SELECT name FROM multigraph WHERE `id`='$id'");
+        $result = $result->fetch_array();
+        return $result['name'];
+    }
 }

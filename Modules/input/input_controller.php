@@ -14,32 +14,37 @@
 
 function input_controller()
 {
-    global $mysqli, $redis, $user, $session, $route, $feed_settings;
+    //return array('content'=>"ok");
+
+    global $mysqli, $redis, $user, $session, $route, $max_node_id_limit, $feed_settings;
 
     // There are no actions in the input module that can be performed with less than write privileges
     if (!$session['write']) return array('content'=>false);
 
+    global $feed, $timestore_adminkey;
     $result = false;
 
-    require_once "Modules/feed/feed_model.php";
+    include "Modules/feed/feed_model.php";
     $feed = new Feed($mysqli,$redis, $feed_settings);
 
-    require_once "Modules/input/input_model.php";
+    require "Modules/input/input_model.php"; // 295
     $input = new Input($mysqli,$redis, $feed);
 
-    require_once "Modules/process/process_model.php";
-    $process = new Process($mysqli,$input,$feed,$user->get_timezone($session['userid']));
+    require "Modules/input/process_model.php"; // 886
+    $process = new Process($mysqli,$input,$feed);
+    
+    $process->set_timezone_offset($user->get_timezone($session['userid']));
 
     if ($route->format == 'html')
     {
         if ($route->action == 'api') $result = view("Modules/input/Views/input_api.php", array());
-        else if ($route->action == 'view') $result =  view("Modules/input/Views/input_view.php", array());
+        if ($route->action == 'view') $result =  view("Modules/input/Views/input_view.php", array());
     }
 
-    else if ($route->format == 'json')
+    if ($route->format == 'json')
     {
         /*
-
+        
         input/bulk.json?data=[[0,16,1137],[2,17,1437,3164],[4,19,1412,3077]]
 
         The first number of each node is the time offset (see below).
@@ -58,7 +63,7 @@ function input_controller()
         (number of seconds since 1970-01-01 00:00:00 UTC)
 
         Examples:
-
+        
         // legacy mode: 4 is 0, 2 is -2 and 0 is -4 seconds to now.
           input/bulk.json?data=[[0,16,1137],[2,17,1437,3164],[4,19,1412,3077]]
         // offset mode: -6 is -16 seconds to now.
@@ -75,15 +80,18 @@ function input_controller()
         if ($route->action == 'bulk')
         {
             $valid = true;
-
+            
             if (!isset($_GET['data']) && isset($_POST['data']))
             {
                 $data = json_decode(post('data'));
             }
-            else
+            else 
             {
                 $data = json_decode(get('data'));
             }
+            
+            $userid = $session['userid'];
+            $dbinputs = $input->get_inputs($userid);
 
             $len = count($data);
             if ($len>0)
@@ -95,7 +103,7 @@ function input_controller()
                         $time_ref = time() - (int) $_GET['sentat'];
                     }  elseif (isset($_POST['sentat'])) {
                         $time_ref = time() - (int) $_POST['sentat'];
-                    }
+                    } 
                     // Offset mode: input/bulk.json?data=[[-10,16,1137],[-8,17,1437,3164],[-6,19,1412,3077]]&offset=-10
                     elseif (isset($_GET['offset'])) {
                         $time_ref = time() - (int) $_GET['offset'];
@@ -107,15 +115,12 @@ function input_controller()
                         $time_ref = (int) $_GET['time'];
                     } elseif (isset($_POST['time'])) {
                         $time_ref = (int) $_POST['time'];
-                    }
+                    } 
                     // Legacy mode: input/bulk.json?data=[[0,16,1137],[2,17,1437,3164],[4,19,1412,3077]]
                     else {
                         $time_ref = time() - (int) $data[$len-1][0];
                     }
 
-                    $userid = $session['userid'];
-                    $dbinputs = $input->get_inputs($userid);
-                    
                     foreach ($data as $item)
                     {
                         if (count($item)>2)
@@ -125,13 +130,6 @@ function input_controller()
 
                             $time = $time_ref + (int) $itemtime;
                             $nodeid = $item[1];
-
-                            $validate_access = $input->validate_access($dbinputs, $nodeid);
-                            if (!$validate_access['success']) {
-                                $valid = false;
-                                $error = $validate_access['message'];
-                                break;
-                            }
 
                             $inputs = array();
                             $name = 1;
@@ -148,21 +146,32 @@ function input_controller()
                             $tmp = array();
                             foreach ($inputs as $name => $value)
                             {
-                                if (!isset($dbinputs[$nodeid][$name]))
+                                if ($input->check_node_id_valid($nodeid))
                                 {
-                                    $inputid = $input->create_input($userid, $nodeid, $name);
-                                    $dbinputs[$nodeid][$name] = true;
-                                    $dbinputs[$nodeid][$name] = array('id'=>$inputid, 'processList'=>'');
-                                    $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+                                    if (!isset($dbinputs[$nodeid][$name]))
+                                    {
+                                        $inputid = $input->create_input($userid, $nodeid, $name);
+                                        $dbinputs[$nodeid][$name] = true;
+                                        $dbinputs[$nodeid][$name] = array('id'=>$inputid, 'processList'=>'');
+                                        $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+                                    }
+                                    else
+                                    {
+                                        $inputid = $dbinputs[$nodeid][$name]['id'];
+                                        $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+
+                                        if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList']);
+                                    }
                                 }
                                 else
                                 {
-                                    $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
-                                    if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList'],'opt'=>array('sourcetype' => "INPUT",'sourceid'=>$dbinputs[$nodeid][$name]['id']));
+
+                                    $valid = false;
+                                    $error = "NodeID must be a positive integer between 0 and ".$max_node_id_limit.", nodeid given was out of range";
                                 }
                             }
 
-                            foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList'],$i['opt']);
+                            foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList']);
 
                         }
                         else
@@ -184,107 +193,128 @@ function input_controller()
                 $error = "Format error, json string supplied is not valid";
             }
 
-            if ($valid) {
+            if ($valid)
+            {
                 $result = 'ok';
-            } else {
+            }
+            else
+            {
                 $result = "Error: $error\n";
-                $log = new EmonLogger(__FILE__);
-                $log->error($error);
             }
         }
 
         // input/post.json?node=10&json={power1:100,power2:200,power3:300}
         // input/post.json?node=10&csv=100,200,300
 
-        else if ($route->action == 'post')
+        if ($route->action == 'post')
         {
             $valid = true; $error = "";
-            $userid = $session['userid'];
-            $dbinputs = $input->get_inputs($userid);
-            $nodeid = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',get('node'));
 
-            $validate_access = $input->validate_access($dbinputs, $nodeid);
-            if (!$validate_access['success']) {
-                $valid = false;
-                $error = $validate_access['message'];
-            } else {
-                if (isset($_GET['time'])) $time = (int) $_GET['time']; else $time = time();
+            $nodeid = preg_replace('/[^\w\s-.]/','',get('node'));
 
-                $datain = false;
-                // code below processes input regardless of json or csv type
-                if (isset($_GET['json'])) $datain = get('json');
-                else if (isset($_GET['csv'])) $datain = get('csv');
-                else if (isset($_GET['data'])) $datain = get('data');
-                else if (isset($_POST['data'])) $datain = post('data');
+            $error = " old".$max_node_id_limit;
 
-                if ($datain!="")
-                {
-                    $json = preg_replace('/[^\p{N}\p{L}_\s-.:,]/u','',$datain);
-                    $datapairs = explode(',', $json);
-                    $data = array();
-
-                    $csvi = 0;
-                    for ($i=0; $i<count($datapairs); $i++)
-                    {
-                        $keyvalue = explode(':', $datapairs[$i]);
-
-                        if (isset($keyvalue[1])) {
-                            if ($keyvalue[0]=='') {$valid = false; $error = "Format error, json key missing or invalid character"; }
-                            if (!is_numeric($keyvalue[1])) {$valid = false; $error = "Format error, json value is not numeric"; }
-                            $data[$keyvalue[0]] = (float) $keyvalue[1];
-                        } else {
-                            if (!is_numeric($keyvalue[0])) {$valid = false; $error = "Format error: csv value is not numeric"; }
-                            $data[$csvi+1] = (float) $keyvalue[0];
-                            $csvi ++;
-                        }
-                    }
-
-                    $tmp = array();
-                    foreach ($data as $name => $value)
-                    {
-                        if (!isset($dbinputs[$nodeid][$name])) {
-                            $inputid = $input->create_input($userid, $nodeid, $name);
-                            $dbinputs[$nodeid][$name] = true;
-                            $dbinputs[$nodeid][$name] = array('id'=>$inputid, 'processList'=>'');
-                            $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
-                        } else {
-                            $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
-                            if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList'],'opt'=>array('sourcetype' => "INPUT",'sourceid'=>$dbinputs[$nodeid][$name]['id']));
-                        }
-                    }
-
-                    foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList'],$i['opt']);
-                }
-                else
-                {
-                    $valid = false; $error = "Request contains no data via csv, json or data tag";
-                }
+            if (!isset($max_node_id_limit))
+            {
+                $max_node_id_limit = 32;
             }
-            
+
+            $error .= " new".$max_node_id_limit;
+
+            if (!$input->check_node_id_valid($nodeid))
+            {
+
+                $valid = false;
+                $error = "NodeID must be a positive integer between 0 and ".$max_node_id_limit.", nodeid given was out of range";
+            }
+            if (!$valid)
+            {
+                return array('content'=>"$error");
+            }
+
+            if (isset($_GET['time'])) $time = (int) $_GET['time']; else $time = time();
+
+            $data = array();
+
+            $datain = false;
+            // code below processes input regardless of json or csv type
+            if (isset($_GET['json'])) $datain = get('json');
+            if (isset($_GET['csv'])) $datain = get('csv');
+            if (isset($_GET['data'])) $datain = get('data');
+            if (isset($_POST['data'])) $datain = post('data');
+
+            if ($datain!="")
+            {
+                $json = preg_replace('/[^\w\s-.:,]/','',$datain);
+                $datapairs = explode(',', $json);
+
+                $csvi = 0;
+                for ($i=0; $i<count($datapairs); $i++)
+                {
+                    $keyvalue = explode(':', $datapairs[$i]);
+
+                    if (isset($keyvalue[1])) {
+                        if ($keyvalue[0]=='') {$valid = false; $error = "Format error, json key missing or invalid character"; }
+                        if (!is_numeric($keyvalue[1])) {$valid = false; $error = "Format error, json value is not numeric"; }
+                        $data[$keyvalue[0]] = (float) $keyvalue[1];
+                    } else {
+                        if (!is_numeric($keyvalue[0])) {$valid = false; $error = "Format error: csv value is not numeric"; }
+                        $data[$csvi+1] = (float) $keyvalue[0];
+                        $csvi ++;
+                    }
+                }
+
+                $userid = $session['userid'];
+                $dbinputs = $input->get_inputs($userid);
+
+                $tmp = array();
+                foreach ($data as $name => $value)
+                {
+                    if (!isset($dbinputs[$nodeid][$name])) {
+                        $inputid = $input->create_input($userid, $nodeid, $name);
+                        $dbinputs[$nodeid][$name] = true;
+                        $dbinputs[$nodeid][$name] = array('id'=>$inputid);
+                        $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+                    } else {
+                        $inputid = $dbinputs[$nodeid][$name]['id'];
+                        $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+
+                        if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList']);
+                    }
+                }
+
+                foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList']);
+            }
+            else
+            {
+                $valid = false; $error = "Request contains no data via csv, json or data tag";
+            }
+
             if ($valid)
                 $result = 'ok';
-            else {
+            else
                 $result = "Error: $error\n";
-                $log = new EmonLogger(__FILE__);
-                $log->error($error);
-            }
         }
 
+        if ($route->action == "clean") $result = $input->clean($session['userid']);
+        if ($route->action == "list") $result = $input->getlist($session['userid']);
+        if ($route->action == "getinputs") $result = $input->get_inputs($session['userid']);
+        if ($route->action == "getallprocesses") $result = $process->get_process_list();
 
-        else if ($route->action == "list") $result = $input->getlist($session['userid']);
-        else if ($route->action == "getinputs") $result = $input->get_inputs($session['userid']);
-        else if ($route->action == "clean") $result = $input->clean($session['userid']);
-
-        else if (isset($_GET['inputid']) && $input->belongs_to_user($session['userid'],get("inputid")))
+        if (isset($_GET['inputid']) && $input->belongs_to_user($session['userid'],get("inputid")))
         {
+            if ($route->action == "delete") $result = $input->delete($session['userid'],get("inputid"));
+
             if ($route->action == 'set') $result = $input->set_fields(get('inputid'),get('fields'));
-            else if ($route->action == "delete") $result = $input->delete($session['userid'],get("inputid"));
-            else if ($route->action == "process")
+
+            if ($route->action == "process")
             {
-                if ($route->subaction == "get") $result = $input->get_processlist(get("inputid"));
-                else if ($route->subaction == "set") $result = $input->set_processlist(get('inputid'), post('processlist'));
-                else if ($route->subaction == "reset") $result = $input->reset_processlist(get("inputid"));
-            }
+                if ($route->subaction == "add") $result = $input->add_process($process,$session['userid'], get('inputid'), get('processid'), get('arg'), get('newfeedname'), get('newfeedinterval'),get('engine'));
+                if ($route->subaction == "list") $result = $input->get_processlist(get("inputid"));
+                if ($route->subaction == "delete") $result = $input->delete_process(get("inputid"),get('processid'));
+                if ($route->subaction == "move") $result = $input->move_process(get("inputid"),get('processid'),get('moveby'));
+                if ($route->subaction == "reset") $result = $input->reset_process(get("inputid"));
+            }           
         }
     }
 

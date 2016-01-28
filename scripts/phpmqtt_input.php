@@ -29,59 +29,39 @@
     
     define('EMONCMS_EXEC', 1);
 
-    $fp = fopen("/var/lock/phpmqtt_input.lock", "w");
+    $fp = fopen("runlock", "w");
     if (! flock($fp, LOCK_EX | LOCK_NB)) { echo "Already running\n"; die; }
     
-    chdir(dirname(__FILE__)."/../");
-    require "Lib/EmonLogger.php";
+    chdir("/var/www/emoncms");
+    
+    require "Modules/log/EmonLogger.php";
+    
     require "process_settings.php";
-    
-    if (!$mqtt_enabled) { echo "Error: setting must be true: mqtt_enabled\n"; die; }
-    if (!isset($mqtt_server)) { echo "Error: mqtt server not configured, check setting: mqtt_server\n"; die; }
-    
-    $log = new EmonLogger(__FILE__);
-    $log->info("Starting MQTT Input script");
-    
     $mysqli = @new mysqli($server,$username,$password,$database);
-    if ($mysqli->connect_error) { $log->error("Can't connect to database:". $mysqli->connect_error);  die('Check log\n'); }
-
-    if ($redis_enabled) {
-        $redis = new Redis();
-        if (!$redis->connect($redis_server['host'], $redis_server['port'])) { 
-            $log->error("Could not connect to redis at ".$redis_server['host'].":".$redis_server['port']);  die('Check log\n'); 
-        }
-        if (!empty($redis_server['prefix'])) $redis->setOption(Redis::OPT_PREFIX, $redis_server['prefix']);
-        if (!empty($redis_server['auth'])) {
-            if (!$redis->auth($redis_server['auth'])) { 
-                $log->error("Could not connect to redis at ".$redis_server['host'].", autentication failed"); die('Check log\n');
-            }
-        }
-    } else {
-        $redis = false;
-    }
+    $redis = new Redis();
+    $redis->connect("127.0.0.1");
     
     require("Lib/phpMQTT.php");
-    $mqtt = new phpMQTT($mqtt_server, $mqtt_port, "Emoncms input subscriber");
+    $mqtt = new phpMQTT("127.0.0.1", 1883, "Emoncms input subscriber");
     
     require("Modules/user/user_model.php");
     $user = new User($mysqli,$redis,null);
+    
+    include "Modules/feed/feed_model.php";
+    $feed = new Feed($mysqli,$redis,$feed_settings);
 
-    require_once "Modules/feed/feed_model.php";
-    $feed = new Feed($mysqli,$redis, $feed_settings);
-
-    require_once "Modules/input/input_model.php";
+    require "Modules/input/input_model.php"; // 295
     $input = new Input($mysqli,$redis, $feed);
 
-    require_once "Modules/process/process_model.php";
-    $process = new Process($mysqli,$input,$feed,$user->get_timezone($mqttsettings['userid']));
+    require "Modules/input/process_model.php"; // 886
+    $process = new Process($mysqli,$input,$feed);
   
-    if(!$mqtt->connect(true,NULL,$mqtt_user, $mqtt_password)){
-        $log->error ("Cannot connect to MQTT Server"); 
-        exit(1);
+    if(!$mqtt->connect()){
+	    exit(1);
     }
 
     $topic = $mqttsettings['basetopic']."/#";
-    echo "Subscribing to: ".$topic."\n";
+    print "Subscribing to: ".$topic."\n";
     
     $topics[$topic] = array("qos"=>0, "function"=>"procmsg");
     $mqtt->subscribe($topics,0);
@@ -91,7 +71,7 @@
     function procmsg($topic,$value)
     { 
         $time = time();
-        echo $topic." ".$value."\n";
+        print $topic." ".$value."\n";
         
         global $mqttsettings, $user, $input, $process, $feed;
         
@@ -139,7 +119,7 @@
                 $dbinputs[$nodeid][$name] = true;
                 $dbinputs[$nodeid][$name] = array('id'=>$inputid);
                 $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
-                echo "set_timevalue\n";
+                print "set_timevalue\n";
             } else {
                 $inputid = $dbinputs[$nodeid][$name]['id'];
                 $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);

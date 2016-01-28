@@ -13,7 +13,6 @@ var list = {
     'data':{},
     'fields':{},
     'element':"#table",
-    'timezones':{},
 
     'init':function()
     {
@@ -22,7 +21,7 @@ var list = {
         for (field in list.fields) {
             tr = $("<tr />").attr("field", field);
             tr.append('  <td type="name" class="muted" style="width:150px;">'+list.fields[field].title+'</td>');
-            tr.append('  <td type="value">'+(list.fieldtypes[list.fields[field].type].draw(list.data[field])||'N/A')+'</td>');
+            tr.append('  <td type="value">'+(list.fieldtypes[list.fields[field].type].draw(list.data[field],field)||'N/A')+'</td>');
             tr.append('  <td type="edit" action="edit"><i class="icon-pencil" style="display:none"></i></td>');
             table.append(tr);
         }
@@ -41,7 +40,7 @@ var list = {
             if (action=='save')
             {
               list.data[field] = list.fieldtypes[list.fields[field].type].save(field);
-              $(list.element+" tr[field="+field+"] td[type=value]").html(list.fieldtypes[list.fields[field].type].draw(list.data[field]));
+              $(list.element+" tr[field="+field+"] td[type=value]").html(list.fieldtypes[list.fields[field].type].draw(list.data[field], field));
               $(this).html("<i class='icon-pencil' style='display:none'></i>").attr('action','edit');
               $(list.element).trigger("onSave",[]);
             }
@@ -69,26 +68,11 @@ var list = {
 
         'select':
         {
-          'draw':function(value) { return value },
-          'edit':function(field,value) 
+          'draw':function(value,field) 
           {
-            var options = '';
             for (i in list.fields[field].options)
             {
-              var selected = ""; if (list.fields[field].options[i] == value) selected = 'selected';
-              options += "<option value="+list.fields[field].options[i]+" "+selected+">"+list.fields[field].options[i]+"</option>";
-            }
-            return "<select>"+options+"</select>";
-          },
-          'save':function(field) { return $(list.element+' tr[field='+field+'] td[type=value] select').val();}
-        },
-
-        'language':
-        {
-          'draw':function(value) { 
-            for (i in list.fields['language'].options)
-            {
-              if (list.fields['language'].options[i] == value) return list.fields['language'].label[i];
+              if (list.fields[field].options[i] == value) return list.fields[field].label[i];
             } 
           },
           'edit':function(field,value) 
@@ -108,25 +92,27 @@ var list = {
         {
           'draw':function(value) 
           { 
-            return value;
+            var sign = value >= 0 ? '+' : ''; 
+            return "UTC "+sign+(value||0)+":00"; 
           },
           'edit':function(field,value) 
           {
             var select = $('<select />'),
-                selectedIndex = null;
+                selectedIndex = null,
+                sign;
                 
-            for (i in list.timezones) {
-              var tz = list.timezones[i];
+            for (var i=-12; i<=14; i++) { 
               var selected = ""; 
-              if (value == tz.id) {
+              if (value == i) {
                 selected = 'selected';
-                selectedIndex = tz.id;
+                selectedIndex = i;
               }
-              select.append("<option value="+tz.id+" "+selected+">"+tz.id+" ("+tz.gmt_offset_text+")</option>");
+              sign = i >= 0 ? '+' : '';
+              select.append("<option value="+i+" "+selected+">UTC "+sign+i+":00</option>");
             }
-            //If no selected index were set, then default to UTC
+            //If no selected index were set, then default to 0
             if ( selectedIndex === null ) {
-                select.find("option[value='UTC']").attr('selected', 'selected');
+                select.find("option[value='0']").attr('selected', 'selected');
             }
             return select.wrap('<p>').parent().html();  //return HTML-string
           },

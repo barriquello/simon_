@@ -8,7 +8,7 @@
 <script type="text/javascript" src="<?php echo $path; ?>Modules/monitor/monitor.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Modules/monitor/processlist.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Modules/input/Views/input.js"></script>
-<script type="text/javascript" src="<?php echo $path; ?>Modules/monitor/process_info.js"></script>
+<script type="text/javascript" src="<?php echo $path; ?>Modules/input/Views/process_info.js"></script>
 <script type="text/javascript" src="<?php echo $path; ?>Modules/feed/feed.js"></script>
 
 <br>
@@ -59,41 +59,35 @@
                     <span id="type-value">
                         <input type="text" id="value-input" style="width:125px" />
                     </span>
-						
+
                     <span id="type-input">
                         <select id="input-select" style="width:140px;"></select>
                     </span>
 
-                    <span id="type-feed">    
-							<div class="input-prepend">
-                                <span class="add-on feed-select-label">Data</span>
-                                <div class="btn-group">
-                                    <select id="feed-data-type" class="input-medium" style="width: 105px;" readonly>
-                                        <option value=0>Any type</option>
-                                        <option value=1>Realtime</option>
-                                        <option value=2>Daily</option>
-                                        <option value=3>Histogram</option>
-                                    </select>
-                                </div>
-                            </div>				
-							
+                    <span id="type-feed">        
                         <select id="feed-select" style="width:140px;"></select>
                         
                         <input type="text" id="feed-name" style="width:150px;" placeholder="Feed name..." />
-						<input type="hidden" id="new-feed-tag"/>
-						
-                        <span class="add-on feed-engine-label">Armazenamento: </span>
-                        
 
-						 <select id="feed-engine" class="input-medium">
-						<?php // All supported engines must be here, add to engines_hidden array in settings.php to hide them from user ?>
-										<option value=6 selected>Intervalo Fixo Com Média</option>
-										<option value=5 >Intervalo Fixo Sem Média</option>
-										<option value=2 >Intervalo Variável Sem Média</option>
-                                        <option value=0>MYSQL TimeSeries</option>
-                                        <option value=8>MYSQL Memory (RAM data lost on power off)</option>
+                        <span class="add-on feed-engine-label">Armazenamento: </span>
+                        <select id="feed-engine">
+
+                        <optgroup label="Recommended">
+                        <option value=6 selected>Intervalo Fixo Com Média</option>
+                        <option value=5 >Intervalo Fixo Sem Média</option>
+                        <option value=2 >Intervalo Variável Sem Média</option>
+                        </optgroup>
+
+                        <optgroup label="Other">
+                        <option value=4 >PHPTIMESTORE (Timestore em PHP)</option>  
+                        <option value=1 >TIMESTORE (Necessita instalação do timestore)</option>
+                        <option value=3 >GRAPHITE (Necessita instalação do graphite)</option>
+                        <option value=0 >MYSQL</option>
+                        </optgroup>
+
                         </select>
-                        
+
+
                         <select id="feed-interval" style="width:130px">
                             <option value="">Selecione intervalo</option>
                             <option value=5>5s</option>
@@ -145,10 +139,10 @@
     },
 	
 	Modbus_PM210: {
-      name: 'Registadores Modbus PM-210',
+      name: 'Medidor PM-210',
       updateinterval: 30,
-      variables: [
-		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */	  
+      variables: [	  
+		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */
 		{name: 'Slave', type: 0, scale: 1, units: ' '}, /* id */
 		{name: 'Entradas', type: 0, scale: 1, units: 'b'}, /* entrada */
 		{name: 'Ano', type: 0, scale: 1, units: 'a'}, /* ano */
@@ -156,7 +150,7 @@
 		{name: 'Dia', type: 0, scale: 1, units: 'd'}, /* dia */
 		{name: 'Horas', type: 0, scale: 1, units: 'h'}, /* hora */
 		{name: 'Minutos', type: 0, scale: 1, units: 'm'}, /* minuto */
-		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */		
+		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */
 		{name: 'Real_Energy_Consumption', type: 2 , units: 'kWh'}, 	/* scale = reg 4108 */
         {name: 'Apparent_Energy_Consumption', type: 2, units: 'kVAh'}, /* scale = reg 4108 */
         {name: 'Reactive_Energy_Consumption', type: 2, units: 'kVARh'}, /* scale = reg 4108 */ 
@@ -185,12 +179,16 @@
         {name: 'Voltage_Phase_A_C', type: 1, units: 'V'}, /* scale = reg 4106 */ 		
 		{name: 'Voltage_Phase_A_N', type: 1, units: 'V'}, /* scale = reg 4106 */
         {name: 'Voltage_Phase_B_N', type: 1, units: 'V'}, /* scale = reg 4106 */
-        {name: 'Voltage_Phase_C_N', type: 1, units: 'V'} /* scale = reg 4106 */ 			
+        {name: 'Voltage_Phase_C_N', type: 1, units: 'V'}, /* scale = reg 4106 */ 
+		{name: 'Scale_Factor_I', type: 0, units: 'exp'}, /* scale = reg 4106 */ 		
+		{name: 'Scale_Factor_V', type: 0, units: 'exp'}, /* scale = reg 4106 */
+        {name: 'Scale_Factor_W', type: 0, units: 'exp'}, /* scale = reg 4106 */
+        {name: 'Scale_Factor_E', type: 0, units: 'exp'} /* scale = reg 4106 */		
       ]
     },
 	
-	  Modbus_T500: {
-      name: 'Modbus T500',
+	Modbus_T500: {
+      name: 'Medidor T500',
       updateinterval: 30,
       variables: [
 		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */	  
@@ -212,10 +210,53 @@
         {name: 'Current_PhaseA_Angle', type: 6, scale: 1, units: 'graus'}, /* float */
         {name: 'Total_Power_Factor', type: 6, scale: 1, units: 'FP'},  /* float */
 		{name: 'Total_PF_Carac', type: 4, scale: 1, units: 'FP'},  /* long  */
-		{name: 'Frequency', type: 6, scale: 1, units: 'Hz'},  /* Hz, float */		
+		{name: 'Frequency', type: 6, scale: 1, units: 'Hz'}  /* Hz, float */		
+       ]
+	  },
+	  
+	Modbus_Null: {
+      name: 'Medidor Local',
+      updateinterval: 30,
+      variables: [
+		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */	  
+		{name: 'Slave', type: 0, scale: 1, units: ' '}, /* id */
+		{name: 'Entradas', type: 0, scale: 1, units: 'b'}, /* entrada */
+		{name: 'Ano', type: 0, scale: 1, units: 'a'}, /* ano */
+		{name: 'Mes', type: 0, scale: 1, units: 'm'}, /* mes */
+		{name: 'Dia', type: 0, scale: 1, units: 'd'}, /* dia */
+		{name: 'Horas', type: 0, scale: 1, units: 'h'}, /* hora */
+		{name: 'Minutos', type: 0, scale: 1, units: 'm'}, /* minuto */
+		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */
+	    {name: 'Pressure_Valve_H', type: 0, scale: 1, units: 'Bar'}, /* int */
+		{name: 'Pressure_Valve_L', type: 0, scale: 1, units: 'Bar'}, /* int */
+		{name: 'Oil_Level_H', type: 6, scale: 1, units: 'L'}, /* int */
+		{name: 'Oil_Level_L', type: 6, scale: 1, units: 'L'},  /* int */	
       ]
     },
-
+	
+	Modbus_TS: {
+      name: 'Medidor TS',
+      updateinterval: 30,
+      variables: [
+		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */	  
+		{name: 'Slave', type: 0, scale: 1, units: ' '}, /* id */
+		{name: 'Entradas', type: 0, scale: 1, units: 'b'}, /* entrada */
+		{name: 'Ano', type: 0, scale: 1, units: 'a'}, /* ano */
+		{name: 'Mes', type: 0, scale: 1, units: 'm'}, /* mes */
+		{name: 'Dia', type: 0, scale: 1, units: 'd'}, /* dia */
+		{name: 'Horas', type: 0, scale: 1, units: 'h'}, /* hora */
+		{name: 'Minutos', type: 0, scale: 1, units: 'm'}, /* minuto */
+		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */
+	    {name: 'Temperatura_oleo', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */ 
+		{name: 'Temperatura_enrolamento', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */ 
+		{name: 'Temperatura_RTD2', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */ 
+		{name: 'Temperatura_RTD3', type: 1, scale: 0.1, units: 'ºC'},  /* -55...200 - 0,1 */ 
+		{name: 'Temperatura_maxima_oleo', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */
+		{name: 'Temperatura_maxima_enrolamento', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */ 
+        {name: 'Temperatura_maxima_RTD2', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */ 
+        {name: 'Temperatura_maxima_RTD3', type: 1, scale: 0.1, units: 'ºC'}, /* -55...200 - 0,1 */       	
+       ]
+	  },
 
   /*
     lowpowertemperaturenode: {
@@ -617,12 +658,14 @@ function int32tofloat(a)
 
     var secs = (now-update)/1000;
     var mins = secs/60;
-    var hour = secs/3600
+    var hour = secs/3600;
+	var days = hour/24;
 
     var updated = secs.toFixed(0)+"s atrás";
     if (secs>180) updated = mins.toFixed(0)+" mins atrás";
     if (secs>(3600*2)) updated = hour.toFixed(0)+" horas atrás";
-    if (hour>24) updated = "inativo";
+    if (hour>24) updated = days.toFixed(0)+" dias atrás";
+	if (days>30) updated = "inativo";
 
     var color = "rgb(255,125,20)";
     if (secs<25) color = "rgb(50,200,50)"
@@ -634,7 +677,7 @@ function int32tofloat(a)
   processlist_ui.monitors = monitors;
   processlist_ui.feedlist = feed.list_assoc();
   processlist_ui.inputlist = input.list_assoc();
-  processlist_ui.processlist = monitor.getallprocesses();
+  processlist_ui.processlist = input.getallprocesses();
   processlist_ui.events();
  
 </script>

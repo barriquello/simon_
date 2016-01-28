@@ -1,8 +1,4 @@
 .project
 debian/emoncms*
+emoncms.log
 .idea
-
-# Ignore all themes except basic
-Theme/*
-Theme/*/
-!Theme/basic/

@@ -2,9 +2,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: emoncms3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-09-03 17:33+0100\n"
-"PO-Revision-Date: 2015-09-03 17:36+0100\n"
-"Last-Translator: Ildefonso Martínez Marchena <i.martinezmarchena@gmail.com>\n"
+"POT-Creation-Date: 2015-02-06 12:53+0100\n"
+"PO-Revision-Date: 2015-02-06 12:53+0100\n"
+"Last-Translator: Jesús Jiménez <jesjimenez@gmail.com>\n"
 "Language-Team: \n"
 "Language: es_ES\n"
 "MIME-Version: 1.0\n"
@@ -13,8 +13,12 @@ msgstr ""
 "X-Poedit-KeywordsList: _;gettext;gettext_noop\n"
 "X-Poedit-Basepath: .\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"X-Generator: Poedit 1.7.5\n"
+"X-Generator: Poedit 1.5.4\n"
 "X-Poedit-SearchPath-0: ../../..\n"
+
+#: ../../../feed_menu.php:7 ../../../Views/feedlist_view.php:26
+msgid "Feeds"
+msgstr "Fuentes"
 
 #: ../../../Views/feedapi_view.php:19
 msgid "Feed API"
@@ -22,274 +26,171 @@ msgstr "API de fuentes de datos"
 
 #: ../../../Views/feedapi_view.php:21
 msgid "Apikey authentication"
-msgstr "Identificación por apikey"
+msgstr "Clave de API (apikey)"
 
 #: ../../../Views/feedapi_view.php:22
 msgid ""
-"If you want to call any of the following actions when your not logged in you "
-"have this options to authenticate with the API key:"
+"If you want to call any of the following action's when your not logged in, "
+"add an apikey to the URL of your request: &apikey=APIKEY."
 msgstr ""
-"Si quiere hacer peticiones a alguna de las siguientes acciones sin estar "
-"logueado, tienes estas opciones para autenticarte con la API key:"
+"Para ejecutar alguna de las siguientes acciones cuando no hay una sesión "
+"iniciada, es necesario añadir la clave de API (apikey) a la URL de la "
+"petición: &apikey=APIKEY."
 
 #: ../../../Views/feedapi_view.php:23
-msgid "Append on the URL of your request: &apikey=APIKEY"
-msgstr "Añade a la url de la petición: &apikey=APIKEY"
-
-#: ../../../Views/feedapi_view.php:24
-msgid "Use POST parameter: \"apikey=APIKEY\""
-msgstr "Usa el parámetro POST: \"apikey=APIKEY\""
-
-#: ../../../Views/feedapi_view.php:25
-msgid "Add the HTTP header: \"Authorization: Bearer APIKEY\""
-msgstr "Añade la cabecera HTTP:\"Authorization: Bearer APIKEY\""
-
-#: ../../../Views/feedapi_view.php:26
 msgid "Read only:"
-msgstr "Acceso de solo lectura:"
+msgstr "Acceso de sólo lectura:"
 
-#: ../../../Views/feedapi_view.php:29
+#: ../../../Views/feedapi_view.php:27
 msgid "Read & Write:"
-msgstr "Lectura & Escritura"
+msgstr "Lectura y escritura:"
 
-#: ../../../Views/feedapi_view.php:33
+#: ../../../Views/feedapi_view.php:31
 msgid "Html"
 msgstr "HTML"
 
-#: ../../../Views/feedapi_view.php:34
+#: ../../../Views/feedapi_view.php:32
 msgid "The feed list view"
-msgstr "Vista de la lista de fuentes"
+msgstr "Lista de fuentes"
 
-#: ../../../Views/feedapi_view.php:35
+#: ../../../Views/feedapi_view.php:33
 msgid "This page"
 msgstr "Esta página"
 
-#: ../../../Views/feedapi_view.php:37
+#: ../../../Views/feedapi_view.php:35
 msgid "JSON"
 msgstr "JSON"
 
-#: ../../../Views/feedapi_view.php:38
+#: ../../../Views/feedapi_view.php:36
 msgid "To use the json api the request url needs to include .json"
-msgstr "Para usar la api json la URL de la request debe incluir .json"
+msgstr "Para usar la API JSON, la URL de la petición debe incluir <b>.json</b>"
 
-#: ../../../Views/feedapi_view.php:43
-msgid "List feeds for autenticated user"
-msgstr "Listar las fuentes para un usuario autentificado"
-
-#: ../../../Views/feedapi_view.php:46
-msgid "List public feeds for the given user"
-msgstr "Listar las fuentes publicas para el usuario seleccionado"
-
-#: ../../../Views/feedapi_view.php:49
-msgid "Get feed id by name"
-msgstr "Seleccionar el id de una fuente por nombre"
-
-#: ../../../Views/feedapi_view.php:53
-msgid "Get feed field"
-msgstr "Seleccionar campo de la fuente"
-
-#: ../../../Views/feedapi_view.php:56
-msgid "Get all feed fields"
-msgstr "Seleccionar todos los campos de la fuente"
-
-#: ../../../Views/feedapi_view.php:63
-msgid "Last updated time and value for feed"
-msgstr "Último tiempo actualizado y valor para la fuente"
-
-#: ../../../Views/feedapi_view.php:66
-msgid "Last value of a given feed"
-msgstr "Último valor de la fuente"
-
-#: ../../../Views/feedapi_view.php:69
-msgid "Last value for multiple feeds"
-msgstr "Último valor para varias fuentes"
-
-#: ../../../Views/feedapi_view.php:72
-msgid "Returns feed data"
-msgstr "Datos de la fuente"
-
-#: ../../../Views/feedapi_view.php:75
-msgid "Returns histogram data"
-msgstr "Histograma de datos"
-
-#: ../../../Views/feedapi_view.php:78
-msgid "Returns kwh consumed in a given power band using histogram data type"
+#: ../../../Views/feedapi_view.php:37
+msgid "returns a list of public feeds made public by the given user."
 msgstr ""
-"kWh consumidos en una banda de potencia usando el tipo de datos histograma"
+"devuelve una lista de las fuentes públicas publicadas por el usuario dado."
 
-#: ../../../Views/feedapi_view.php:107
-msgid "Return total engines size"
-msgstr "Tamaño total de los motores"
+#: ../../../Views/feedapi_view.php:38 ../../../Views/feedapi_view.php:39
+msgid "returns the present value of a given feed"
+msgstr "devuelve el valor actual de la fuente"
 
-#: ../../../Views/feedapi_view.php:110
-msgid "Return buffer points pending write"
-msgstr "Puntos del buffer a espera de escritura"
+#: ../../../Views/feedapi_view.php:40
+msgid "returns feed data"
+msgstr "devuelve los datos de la fuente"
 
-#: ../../../Views/feedapi_view.php:115
-msgid "Virtual feed process actions"
-msgstr "Procesos para la fuente virtual"
+#: ../../../Views/feedapi_view.php:41
+msgid "returns histogram data"
+msgstr "devuelve datos de histograma"
 
-#: ../../../Views/feedapi_view.php:117
-msgid "Get feed process list"
-msgstr "Obtener lista de procesos de una fuente"
+#: ../../../Views/feedapi_view.php:42
+msgid "returns kwh consumed in a given power band using histogram data type"
+msgstr ""
+"devuelve los kWh consumidos en la franja de potencia especificada, usando el "
+"tipo de datos de histograma"
 
-#: ../../../Views/feedapi_view.php:118
-msgid "Set feed process list"
-msgstr "Modificar lista de procesos de una fuente"
+#: ../../../Views/feedapi_view.php:44
+msgid "returns id of a feed given by name"
+msgstr ""
+"devuelve el identificador (id) de una fuente de la que se ha especificado el "
+"nombre"
 
-#: ../../../Views/feedapi_view.php:119
-msgid "Reset feed process list"
-msgstr "Resetear lista de procesos de una fuente"
-
-#: ../../../Views/feedlist_view.php:28
+#: ../../../Views/feedlist_view.php:23
 msgid "Feed API Help"
-msgstr "Ayuda de la API para fuentes de datos"
+msgstr "Ayuda de la API de fuentes de datos"
 
-#: ../../../Views/feedlist_view.php:29 ../../../feed_menu.php:7
-msgid "Feeds"
-msgstr "Fuentes"
-
-#: ../../../Views/feedlist_view.php:32
+#: ../../../Views/feedlist_view.php:31
 msgid "No feeds created"
 msgstr "No existen fuentes de datos"
 
-#: ../../../Views/feedlist_view.php:33
+#: ../../../Views/feedlist_view.php:32
 msgid ""
-"Feeds are where your monitoring data is stored. The route for creating "
-"storage feeds is to start by creating inputs (see the inputs tab). Once you "
+"Feeds are where your monitoring data is stored. The recommended route for "
+"creating feeds is to start by creating inputs (see the inputs tab). Once you "
 "have inputs you can either log them straight to feeds or if you want you can "
 "add various levels of input processing to your inputs to create things like "
-"daily average data or to calibrate inputs before storage. Alternatively you "
-"can create Virtual feeds, this is a special feed that allows you to do post "
-"processing on existing storage feeds data, the main advantage is that it "
-"will not use additional storage space and you may modify post processing "
-"list that gets applyed on old stored data. You may want to follow the link "
-"as a guide for generating your request."
+"daily average data or to calibrate inputs before storage. You may want to "
+"follow the link as a guide for generating your request."
 msgstr ""
-"Las fuentes son el lugar donde tus dato recogido son almacenados. La forma "
-"de crear fuentes de almacenado es empezar creando entradas (véase la tab "
-"Entradas). Una vez que tienes las entradas puedes o bien guardarlas "
-"directamente en las fuentes o añadir varios niveles de procesado de la "
-"entrada para crear cosas como la media diaria o calibrar las entradas antes "
-"del almacenamiento. Alternativamente, e pueden crear fuentes virtuales, un "
-"tipo especial que te permite hacer post-procesamiento en fuentes existentes. "
-"La principal ventaja de ésto es que no usa espacio extra de guardado y "
-"puedes modificar la lista de post-procesos que se aplica en datos "
-"antiguamente guardados. Quizás quieras seguir el enlace para guiarte en la "
-"generación de tus peticiones."
+"Las fuentes son donde se guardan los datos de monitorización. La forma "
+"recomendada de crear fuentes es empezar creando entradas (ver pestaña de "
+"entradas). Una vez se hayan creado entradas, se pueden almacenar "
+"directamente dentro de una fuente, o si se quiere se pueden añadir varios "
+"niveles de procesamiento para, por ejemplo, calcular medias diarias o "
+"calibrar entradas antes de guardarlas. El siguiente enlace puede usarse como "
+"guía para generar peticiones."
 
-#: ../../../Views/feedlist_view.php:33
+#: ../../../Views/feedlist_view.php:32
 msgid "Feed API helper"
-msgstr "Ayuda de la API para fuentes de datos"
+msgstr "Ayuda de la API de fuentes de datos"
 
-#: ../../../Views/feedlist_view.php:39
+#: ../../../Views/feedlist_view.php:36
 msgid "Refresh feed size"
-msgstr "Refrescar tamaño de la fuente"
+msgstr "Actualizar tamaños"
 
-#: ../../../Views/feedlist_view.php:40
-msgid "New virtual feed"
-msgstr "Nueva fuente virtual"
+#: ../../../Views/feedlist_view.php:42
+msgid "WARNING deleting a feed is permanent"
+msgstr "Atención, el borrado de la fuente será permante"
 
-#: ../../../Views/feedlist_view.php:47
-msgid "Delete feed"
-msgstr "Borrar fuente"
+#: ../../../Views/feedlist_view.php:45
+msgid "Are you sure you want to delete this feed?"
+msgstr "¿Estás seguro de que quieres borrar la fuente?"
 
-#: ../../../Views/feedlist_view.php:50
-msgid "Deleting a feed is permanent."
-msgstr "Borrar una fuente es permanente"
-
-#: ../../../Views/feedlist_view.php:52
-msgid ""
-"If you have Input Processlist processors that use this feed, after deleting "
-"it, review that process lists or they will be in error, freezing other "
-"Inputs. Also make sure no Dashboards use the deleted feed."
-msgstr ""
-"Si en sus Entradas tiene procesos que usan esta fuente, después de borrarlo "
-"revise dicha lista de procesos u ocurrirá un error, paralizando otras "
-"entradas. Asegúrese también de que ningún panel usa dicha fuente."
-
-#: ../../../Views/feedlist_view.php:53
-msgid ""
-"This is a Virtual Feed, after deleting it, make sure no Dashboard continue "
-"to use the deleted feed."
-msgstr ""
-"Ésta es una fuente virtual. Después de borrarla asegúrese de que ningún "
-"panel lo sigue usando."
-
-#: ../../../Views/feedlist_view.php:55
-msgid "Are you sure you want to delete?"
-msgstr "¿Seguro que quieres borrar?"
-
-#: ../../../Views/feedlist_view.php:58 ../../../Views/feedlist_view.php:145
+#: ../../../Views/feedlist_view.php:48
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: ../../../Views/feedlist_view.php:59
+#: ../../../Views/feedlist_view.php:49
 msgid "Delete permanently"
-msgstr "Borrado permanente"
+msgstr "Borrar permanentemente"
 
-#: ../../../Views/feedlist_view.php:124
+#: ../../../Views/feedlist_view.php:113
 msgid "Close"
 msgstr "Cerrar"
 
-#: ../../../Views/feedlist_view.php:131
-msgid "New Virtual Feed"
-msgstr "Nueva Fuente Virtual"
-
-#: ../../../Views/feedlist_view.php:146
-msgid "Save"
-msgstr "Guardar"
-
-#: ../../../Views/feedlist_view.php:161
+#: ../../../Views/feedlist_view.php:127
 msgid "Id"
 msgstr "Id"
 
-#: ../../../Views/feedlist_view.php:162
-msgid "Tag"
-msgstr "Etiqueta"
-
-#: ../../../Views/feedlist_view.php:163
+#: ../../../Views/feedlist_view.php:128
 msgid "Name"
 msgstr "Nombre"
 
-#: ../../../Views/feedlist_view.php:164
-msgid "Process list"
-msgstr "Lista de procesos"
+#: ../../../Views/feedlist_view.php:129
+msgid "Tag"
+msgstr "Etiqueta"
 
-#: ../../../Views/feedlist_view.php:165
-msgid "Public"
-msgstr "Público"
-
-#: ../../../Views/feedlist_view.php:166
+#: ../../../Views/feedlist_view.php:130
 msgid "Datatype"
 msgstr "Tipo de datos"
 
-#: ../../../Views/feedlist_view.php:167
+#: ../../../Views/feedlist_view.php:131
 msgid "Engine"
 msgstr "Motor"
 
-#: ../../../Views/feedlist_view.php:168
+#: ../../../Views/feedlist_view.php:132
+msgid "Public"
+msgstr "Público"
+
+#: ../../../Views/feedlist_view.php:133
 msgid "Size"
 msgstr "Tamaño"
 
-#: ../../../Views/feedlist_view.php:169
+#: ../../../Views/feedlist_view.php:135
 msgid "Updated"
-msgstr "Actualizado"
+msgstr "Última actualización"
 
-#: ../../../Views/feedlist_view.php:170
+#: ../../../Views/feedlist_view.php:136
 msgid "Value"
 msgstr "Valor"
 
-#~ msgid ""
-#~ "If you want to call any of the following action's when your not logged "
-#~ "in, add an apikey to the URL of your request: &apikey=APIKEY."
-#~ msgstr ""
-#~ "Si quiere realizar alguna de las siguientes acciones cuando no esté "
-#~ "logueado, añada un apikey a la URL: &apikey=APIKEY."
+#~ msgid "Set a feed field:"
+#~ msgstr "Establecer el valor de un campo de una fuente:"
 
-#, fuzzy
-#~ msgid "Returns histogram data:"
-#~ msgstr "Datos de histograma"
+#~ msgid "Insert a new datapoint:"
+#~ msgstr "Insertar una nueva entrada de datos:"
+
+#~ msgid "Update a datapoint:"
+#~ msgstr "Actualizar una entrada:"
 
 #, fuzzy
 #~ msgid "Delete a datapoint:"
@@ -299,19 +200,11 @@ msgstr "Valor"
 #~ msgid "Delete a feed:"
 #~ msgstr "Borrar fuente:"
 
-#, fuzzy
 #~ msgid "Restore a feed:"
-#~ msgstr "Renombrar fuente"
+#~ msgstr "Restaurar fuente"
 
-#, fuzzy
 #~ msgid "Export a feed:"
-#~ msgstr "fuente convertida:"
-
-#~ msgid "WARNING deleting a feed is permanent"
-#~ msgstr "Atención, el borrado de la fuente será permante"
-
-#~ msgid "Are you sure you want to delete this feed?"
-#~ msgstr "¿Estás seguro de que quieres borrar la fuente?"
+#~ msgstr "Exportar una fuente:"
 
 #~ msgid "Feed "
 #~ msgstr "Fuente"
@@ -638,6 +531,9 @@ msgstr "Valor"
 
 #~ msgid "Notification recipiants (To): "
 #~ msgstr "Destinatarios de las notificaciones (To):"
+
+#~ msgid "Save"
+#~ msgstr "Guardar"
 
 #~ msgid "Notify "
 #~ msgstr "Notificar"

@@ -37,9 +37,9 @@ When, in phpmyadmin, the database has been created, a new user must also be crea
 
 #### 5) Download emoncms
 
-**You may want to install one of the other branches of emoncms here, perhaps to try out a new feature set not yet available in the master branch. See the branch list and descriptions on the [start page](https://github.com/emoncms/emoncms)**
+Download version 8.
 
-[https://github.com/emoncms/emoncms/archive/stable.zip](https://github.com/emoncms/emoncms/archive/stable.zip)
+[https://github.com/emoncms/emoncms/archive/master.zip](https://github.com/emoncms/emoncms/archive/master.zip)
 
     
 #### 6) Place emoncms in your WAMP public html / www directory

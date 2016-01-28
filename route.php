@@ -70,10 +70,5 @@ class Route
         if (count($args) > 0) { $this->controller = $args[0]; }
         if (count($args) > 1) { $this->action = $args[1]; }
         if (count($args) > 2) { $this->subaction = $args[2]; }
-        
-        $this->method = "GET";
-        if ($_SERVER["REQUEST_METHOD"]=="POST") $this->method = "POST";
-        else if ($_SERVER["REQUEST_METHOD"]=="DELETE") $this->method = "DELETE";
-        else if ($_SERVER["REQUEST_METHOD"]=="PUT") $this->method = "PUT";
     }
 }

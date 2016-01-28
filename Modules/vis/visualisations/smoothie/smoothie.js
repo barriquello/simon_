@@ -106,17 +106,8 @@ SmoothieChart.prototype.streamTo = function(canvas, delay) {
 };
 
 SmoothieChart.prototype.start = function() {
-  var self = this;
-  this.animate = function() { 
-    self.timer = setTimeout( 
-        function() {
-          if (self.timer) window.requestAnimationFrame(self.animate);
-          self.render_on_tick();
-        }
-    , 1000/self.options.fps);
-  };
-  this.animate();
-//if (!this.timer) this.timer = setInterval(this.render_on_tick, 1000/this.options.fps);
+  if (!this.timer)
+    this.timer = setInterval(this.render_on_tick, 1000/this.options.fps);
 };
 
 SmoothieChart.prototype.stop = function() {

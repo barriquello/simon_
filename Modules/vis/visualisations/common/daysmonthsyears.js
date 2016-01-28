@@ -86,9 +86,10 @@ function get_months_year(data,year)
 
 function get_years(data)
 {
-  var years = [];
-  years.data = [];
-  years.days =[];
+  var gdata = [];
+  gdata.data = [];
+  gdata.days =[];
+
 
   var sum=0, s=0, i=0;
   var lyear=0,year=0;
@@ -102,11 +103,16 @@ function get_years(data)
 
     d.setTime(data[z][0]);		// Get the date of the day
     year = d.getFullYear();		// Get the year of the day
+               console.log(data[z][0]);
     if (year!=lyear && z!=0)		// We sum all days until we find a new year
     {
-      years.data[i] = [Date.UTC(year-1,0,1), sum];
-      years.days[i] = s;
-      i++;
+      var tmp = [];
+      tmp[0] = Date.UTC(year-1,6,1);
+      tmp[1] = sum;
+
+      gdata.data[i] = tmp;
+      gdata.days[i] = s;
+       i++;
       sum = 0; s = 0;
     }
 
@@ -115,12 +121,17 @@ function get_years(data)
     }
 
   }
-  
-  years.data[i] = [Date.UTC(year,0,1), sum];
-  years.days[i] = s;
 
-  return years;
+  var tmp = [];
+  tmp[0] = Date.UTC(year,6,1);
+  tmp[1] = sum;
+
+  gdata.data[i] = tmp;
+  gdata.days[i] = s;
+
+  return gdata;
 }
+
 
 function daysInMonth(iMonth, iYear)
 {

@@ -16,20 +16,14 @@ defined('EMONCMS_EXEC') or die('Restricted access');
 
 function user_controller()
 {
-    global $user, $path, $session, $route , $enable_multi_user;
+    global $user, $path, $session, $route ,$allowusersregister;
 
     $result = false;
-
-    $allowusersregister = true;
-    // Disables further user creation after first admin user is created
-    if ($enable_multi_user===false && $user->get_number_of_users()>0) {
-        $allowusersregister = false;
-    }
 
     // Load html,css,js pages to the client
     if ($route->format == 'html')
     {
-        if ($route->action == 'login' && !$session['read']) $result = view("Modules/user/login_block.php", array('allowusersregister'=>$allowusersregister));
+        if ($route->action == 'login' && !$session['read']) $result = view("Modules/user/login_block.php", array());
         if ($route->action == 'view' && $session['write']) $result = view("Modules/user/profile/profile.php", array());
         if ($route->action == 'logout' && $session['read']) {$user->logout(); header('Location: '.$path);}
     }
@@ -55,14 +49,14 @@ function user_controller()
 
         // Get and set - user by profile client
         if ($route->action == 'get' && $session['write']) $result = $user->get($session['userid']);
+
         if ($route->action == 'set' && $session['write']) $result = $user->set($session['userid'],json_decode(get('data')));
 
         if ($route->action == 'getconvert' && $session['write']) $result = $user->get_convert_status($session['userid']);
         if ($route->action == 'setconvert' && $session['write']) $result = $user->set_convert_status($session['userid']);
 
-        if ($route->action == 'timezone' && $session['read']) $result = $user->get_timezone_offset($session['userid']); // to maintain compatibility but in seconds
-        if ($route->action == 'gettimezone' && $session['read']) $result = $user->get_timezone($session['userid']);
-        if ($route->action == 'gettimezones' && $session['read']) $result = $user->get_timezones();
+
+        if ($route->action == 'timezone' && $session['read']) $result = $user->get_timezone($session['userid']);
     }
 
     return array('content'=>$result);

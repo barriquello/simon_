@@ -46,7 +46,7 @@ function db_check($mysqli,$database)
 
 function controller($controller_name)
 {
-    $output = array('content'=>"#UNDEFINED#");
+    $output = array('content'=>'');
 
     if ($controller_name)
     {
@@ -58,9 +58,11 @@ function controller($controller_name)
             $domain = "messages";
             bindtextdomain($domain, "Modules/".$controller_name."/locale");
             bind_textdomain_codeset($domain, 'UTF-8');
+
+
             textdomain($domain);
 
-            require_once $controllerScript;
+            require $controllerScript;
             $output = $controller();
         }
     }
@@ -131,11 +133,9 @@ function load_db_schema()
 
 function load_menu()
 {
-    $menu_dashboard = array(); // Published Dashboards
-    $menu_left = array();  // Left
-    $menu_dropdown = array(); // Extra
-    $menu_dropdown_config = array(); //Setup
-    $menu_right = array(); // Right
+    $menu_left = array();
+    $menu_right = array();
+    $menu_dropdown = array();
 
     $dir = scandir("Modules");
     for ($i=2; $i<count($dir); $i++)
@@ -149,6 +149,11 @@ function load_menu()
         }
     }
 
-    return array('dashboard'=>$menu_dashboard, 'left'=>$menu_left, 'dropdown'=>$menu_dropdown, 'dropdownconfig'=>$menu_dropdown_config, 'right'=>$menu_right);
+    usort($menu_left, "menu_sort");
+    return array('left'=>$menu_left, 'right'=>$menu_right, 'dropdown'=>$menu_dropdown);
 }
 
+// Menu sort by order
+function menu_sort($a,$b) {
+    return $a['order']>$b['order'];
+}
