@@ -45,13 +45,13 @@ class Dashboard
         $id = (int) $id;
 
         // Get content, name and description from origin dashboard
-        $result = $this->mysqli->query("SELECT content,name,description,height FROM dashboard WHERE userid = '$userid' AND id='$id'");
+        $result = $this->mysqli->query("SELECT content,name,description FROM dashboard WHERE userid = '$userid' AND id='$id'");
         $row = $result->fetch_array();
 
         // Name for cloned dashboard
         $name = $row['name']._(' clone');
 
-        $this->mysqli->query("INSERT INTO dashboard (`userid`,`content`,`name`,`description`,`height`) VALUES ('$userid','{$row['content']}','$name','{$row['description']}','{$row['height']}')");
+        $this->mysqli->query("INSERT INTO dashboard (`userid`,`content`,`name`,`description`) VALUES ('$userid','{$row['content']}','$name','{$row['description']}')");
 
         return $this->mysqli->insert_id;
     }
@@ -63,10 +63,8 @@ class Dashboard
         $qB = ""; $qC = "";
         if ($public==true) $qB = " and public=1";
         if ($published==true) $qC = " and published=1";
-        if (!$result = $this->mysqli->query("SELECT id, name, alias, description, main, published, public, showdescription FROM dashboard WHERE userid='$userid'".$qB.$qC)) {
-          return array();
-        }
-        
+        $result = $this->mysqli->query("SELECT id, name, alias, description, main, published, public, showdescription FROM dashboard WHERE userid='$userid'".$qB.$qC);
+
         $list = array();
         while ($row = $result->fetch_object())
         {
@@ -91,15 +89,13 @@ class Dashboard
         $height = (int) $height;
         $content = $this->mysqli->real_escape_string($content);
 
+        //echo $content;
+
         $result = $this->mysqli->query("SELECT * FROM dashboard WHERE userid = '$userid' AND id='$id'");
         $row = $result->fetch_array();
-        if ($row) {
-            $this->mysqli->query("UPDATE dashboard SET content = '$content', height = '$height' WHERE userid='$userid' AND id='$id'");
-            if ($this->mysqli->affected_rows>0){
-                return array('success'=>true, 'message'=>'Dashboard updated');
-            }
-        }
-        return array('success'=>false, 'message'=>'Dashboard not updated');
+        if ($row) $this->mysqli->query("UPDATE dashboard SET content = '$content', height = '$height' WHERE userid='$userid' AND id='$id'");
+
+        return array('success'=>true);
     }
 
     public function set($userid,$id,$fields)
@@ -114,13 +110,11 @@ class Dashboard
         // Repeat this line changing the field name to add fields that can be updated:
 
         if (isset($fields->height)) $array[] = "`height` = '".intval($fields->height)."'";
-        if (isset($fields->content)) $array[] = "`content` = '".preg_replace('/[^\p{L}_\p\{N}\s-.#<>?",;:=&\/%~]/u','',$fields->content)."'";
+        if (isset($fields->content)) $array[] = "`content` = '".preg_replace('/[^\w\s-.#<>?",;:=&\/%~]/','',$fields->content)."'";
 
-        if (isset($fields->name)) $array[] = "`name` = '".preg_replace('/[^\p{L}_\p{N}\s-]/u','',$fields->name)."'";
-        if (isset($fields->alias)) $array[] = "`alias` = '".preg_replace('/[^\p{L}_\p{N}\s-]/u','',$fields->alias)."'";
-        if (isset($fields->description)) $array[] = "`description` = '".preg_replace('/[^\p{L}_\p{N}\s-]/u','',$fields->description)."'";
-
-        if (isset($fields->backgroundcolor)) $array[] = "`backgroundcolor` = '".preg_replace('/[^0-9a-f]/','', strtolower($fields->backgroundcolor))."'";
+        if (isset($fields->name)) $array[] = "`name` = '".preg_replace('/[^\w\s-]/','',$fields->name)."'";
+        if (isset($fields->alias)) $array[] = "`alias` = '".preg_replace('/[^\w\s-]/','',$fields->alias)."'";
+        if (isset($fields->description)) $array[] = "`description` = '".preg_replace('/[^\w\s-]/','',$fields->description)."'";
 
         if (isset($fields->main))
         {
@@ -152,26 +146,33 @@ class Dashboard
         return $result->fetch_array();
     }
 
-    public function get($id)
+    public function get($userid, $id, $public, $published)
     {
+        $userid = (int) $userid;
         $id = (int) $id;
-        $result = $this->mysqli->query("SELECT * FROM dashboard WHERE id='$id'");
+        $qB = ""; if ($public==true) $qB = " and public=1";
+        $qC = ""; if ($published==true) $qC = " and published=1";
+
+        $result = $this->mysqli->query("SELECT * FROM dashboard WHERE userid='$userid' and id='$id'".$qB.$qC);
         return $result->fetch_array();
     }
 
     // Returns the $id dashboard from $userid
-    public function get_from_alias($userid, $alias)
+    public function get_from_alias($userid, $alias, $public, $published)
     {
         $userid = (int) $userid;
-        $alias = preg_replace('/[^\p{L}_\p{N}\s-]/u','',$alias);
-        $result = $this->mysqli->query("SELECT * FROM dashboard WHERE userid='$userid' and alias='$alias'");
+        $alias = preg_replace('/[^\w\s-]/','',$alias);
+        $qB = ""; if ($public==true) $qB = " and public=1";
+        $qC = ""; if ($published==true) $qC = " and published=1";
+
+        $result = $this->mysqli->query("SELECT * FROM dashboard WHERE userid='$userid' and alias='$alias'".$qB.$qC);
         return $result->fetch_array();
     }
 
-    public function build_menu_array($location)
+    public function build_menu($userid,$location)
     {
-        global $session;
-        $userid = (int) $session['userid'];
+        global $path, $session;
+        $userid = (int) $userid;
 
         $public = 0; $published = 0;
 
@@ -184,26 +185,27 @@ class Dashboard
         }
 
         $dashboards = $this->get_list($userid, $public, $published);
-        $menu = array();
+        $topmenu="";
         foreach ($dashboards as $dashboard)
         {
             // Check show description
-            $desc = '';
             if ($dashboard['showdescription']) {
-                $desc = $dashboard['description'];
+                    $desc = ' title="'.$dashboard['description'].'"';
+            } else {
+                    $desc = '';
             }
 
-            // Set URL using alias or id
+                // Set URL using alias or id
             if ($dashboard['alias']) {
                 $aliasurl = "/".$dashboard['alias'];
             } else {
                 $aliasurl = '&id='.$dashboard['id'];
             }
 
-            // Build the menu item
-            $menu[] = array('name' => $dashboard['name'], 'desc'=> $desc, 'published'=> $dashboard['published'], 'path' => $dashpath.$aliasurl, 'order' => "-1".$dashboard['name']);
+                // Build the menu item
+            $topmenu.='<li><a href="'.$path.$dashpath.$aliasurl.'"'.$desc.'>'.$dashboard['name'].'</a></li>';
         }
-        return $menu;
+        return $topmenu;
     }
 
 }
