@@ -6,9 +6,14 @@ var processlist_ui =
     variableid: 0,
     monitorid: 10,
     
+	contexttype: 0,         // Editor type (0:input, 1:feed/virtual)
+    contextid: 0,           // The current inputid or virtual feed id being edited
+    contextprocesslist: [], // The current process list being edited
+  
     processlist: [],
     feedlist:[],
     inputlist:[],
+		
     
     enable_mysql_all: false,
 
@@ -146,7 +151,10 @@ var processlist_ui =
         $("#processlist-ui").on('change',"#feed-engine",function(){
             var engine = $(this).val();
             $("#feed-interval").hide();
-            if (engine==6 || engine==5 || engine==4 || engine==1) $("#feed-interval").show();
+            if (engine==6 || engine==5 || engine==4 || engine==1) $("#feed-interval").show();      
+			  var processid = $("#process-select").val();
+			  var datatype = processlist_ui.processlist[processid][4]; // 1:REALTIME, 2:DAILY, 3:HISTOGRAM
+	  
         });
 
         $("#processlist-ui").on('click','#process-add',function() 
@@ -187,7 +195,7 @@ var processlist_ui =
                     }
                     
 					var result = feed.create(feedtag,feedname,datatype,engine,options);
-                    var result = feed.create(feedname,datatype,engine,options);
+                    //var result = feed.create(feedname,datatype,engine,options);
                     feedid = result.feedid;
                 
                     if (!result.success || feedid<1) {
@@ -216,7 +224,9 @@ var processlist_ui =
                 //    alert(data.message);
                 //    return false;
                 //}
+				processlist_ui.contextprocesslist.push([processid,""+arg]);
                 processlist_ui.draw();
+				processlist_ui.modified();
             //}
         });
 
@@ -330,6 +340,21 @@ var processlist_ui =
         }
     
     },
+	
+	'modified':function(){
+		$("#save-processlist").attr('class','btn btn-warning').text("Changed, press to save");
+	  },
+
+	  'saved':function(){
+		$("#save-processlist").attr('class','btn btn-success').text("Saved");
+		// Update context table immedietly
+		for (z in table.data) {
+		  if (table.data[z].id == processlist_ui.contextid) {
+			table.data[z].processList = processlist_ui.encode(processlist_ui.contextprocesslist);
+		  }
+		}
+		table.draw();
+	  },
 
     // Process list functions
     'decode':function(str)

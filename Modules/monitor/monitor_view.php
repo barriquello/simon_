@@ -83,24 +83,17 @@
 						<input type="hidden" id="new-feed-tag"/>
 						
                         <span class="add-on feed-engine-label">Armazenamento: </span>
-                        <select id="feed-engine">
+                        
 
-                        <optgroup label="Recommended">
-                        <option value=6 selected>Intervalo Fixo Com Média</option>
-                        <option value=5 >Intervalo Fixo Sem Média</option>
-                        <option value=2 >Intervalo Variável Sem Média</option>
-                        </optgroup>
-
-                        <optgroup label="Other">
-                        <option value=4 >PHPTIMESTORE (Timestore em PHP)</option>  
-                        <option value=1 >TIMESTORE (Necessita instalação do timestore)</option>
-                        <option value=3 >GRAPHITE (Necessita instalação do graphite)</option>
-                        <option value=0 >MYSQL</option>
-                        </optgroup>
-
+						 <select id="feed-engine" class="input-medium">
+						<?php // All supported engines must be here, add to engines_hidden array in settings.php to hide them from user ?>
+										<option value=6 selected>Intervalo Fixo Com Média</option>
+										<option value=5 >Intervalo Fixo Sem Média</option>
+										<option value=2 >Intervalo Variável Sem Média</option>
+                                        <option value=0>MYSQL TimeSeries</option>
+                                        <option value=8>MYSQL Memory (RAM data lost on power off)</option>
                         </select>
-
-
+                        
                         <select id="feed-interval" style="width:130px">
                             <option value="">Selecione intervalo</option>
                             <option value=5>5s</option>
