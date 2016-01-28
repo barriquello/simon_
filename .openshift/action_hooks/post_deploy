@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "  - Relinkando diretorios "
+
+ln -s /var/lib/openshift/567d36760c1e6600800001a4/app-root/data/emoncmsdata/phpfina /var/lib/openshift/567d36760c1e6600800001a4/app-root/runtime/repo/emoncmsdata/phpfina
+
+chmod -R o+rw $OPENSHIFT_REPO_DIR/emoncmsdata/phpfina
+
