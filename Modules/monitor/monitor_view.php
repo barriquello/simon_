@@ -59,12 +59,24 @@
                     <span id="type-value">
                         <input type="text" id="value-input" style="width:125px" />
                     </span>
-
+						
                     <span id="type-input">
                         <select id="input-select" style="width:140px;"></select>
                     </span>
 
-                    <span id="type-feed">        
+                    <span id="type-feed">    
+							<div class="input-prepend">
+                                <span class="add-on feed-select-label">Data</span>
+                                <div class="btn-group">
+                                    <select id="feed-data-type" class="input-medium" style="width: 105px;" readonly>
+                                        <option value=0>Any type</option>
+                                        <option value=1>Realtime</option>
+                                        <option value=2>Daily</option>
+                                        <option value=3>Histogram</option>
+                                    </select>
+                                </div>
+                            </div>
+					
                         <select id="feed-select" style="width:140px;"></select>
                         
                         <input type="text" id="feed-name" style="width:150px;" placeholder="Feed name..." />
