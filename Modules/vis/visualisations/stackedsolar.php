@@ -10,18 +10,16 @@
 <?php
     global $path, $embed;
 ?>
-
 <!--[if IE]><script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/excanvas.min.js"></script><![endif]-->
-<script type="text/javascript" src="<?php echo $path; ?>Modules/feed/feed.js"></script>
-
 <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.min.js"></script>
 <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.selection.min.js"></script>
 <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.stack.min.js"></script>
-<script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/date.format.js"></script>
 <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.time.min.js"></script>
+<script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/date.format.min.js"></script>
 
 <script language="javascript" type="text/javascript" src="<?php echo $path;?>Modules/vis/visualisations/common/api.js"></script>
 <script language="javascript" type="text/javascript" src="<?php echo $path;?>Modules/vis/visualisations/common/daysmonthsyears.js"></script>
+
 <?php if (!$embed) { ?>
 <h2><?php echo _("Stacked"); ?></h2>
 <?php } ?>
@@ -45,8 +43,11 @@
     var start = +new Date - timeWindow;  //Get start time
     var end = +new Date; 
     
-    var dataA = feed.get_average(kwhdA,start,end,3600*24);
-    var dataB = feed.get_average(kwhdB,start,end,3600*24);
+    start = Math.floor(start / 86400000) * 86400000;
+    end = Math.floor(end / 86400000) * 86400000;
+    
+    var dataA = get_feed_data(kwhdA,start,end,3600*24,1,1);
+    var dataB = get_feed_data(kwhdB,start,end,3600*24,1,1);
 
     var dataC = [];
 
