@@ -75,21 +75,13 @@
                                         <option value=3>Histogram</option>
                                     </select>
                                 </div>
-                            </div>
-					
-							<div class="input-prepend">
-                                <span class="add-on feed-select-label">Feed</span>
-                                <div class="btn-group">
-                                    <select id="feed-select" class="input-medium"></select>
-                                    <input type="text" id="new-feed-name" style="width:140px" placeholder="Type feed name..." />
-                                    <input type="hidden" id="new-feed-tag"/>
-                                </div>
-                            </div>
+                            </div>				
 							
                         <select id="feed-select" style="width:140px;"></select>
                         
                         <input type="text" id="feed-name" style="width:150px;" placeholder="Feed name..." />
-
+						<input type="hidden" id="new-feed-tag"/>
+						
                         <span class="add-on feed-engine-label">Armazenamento: </span>
                         <select id="feed-engine">
 
