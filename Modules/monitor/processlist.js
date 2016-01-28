@@ -216,6 +216,8 @@ var processlist_ui =
             //if (arg!="") 
             //{
                 console.log(processid+" "+arg);
+				console.log("Datatype_engine");
+				console.log(datatype+" "+engine);
                 processlist_ui.variableprocesslist.push([processid,arg]);
                 processlist_ui.monitors[processlist_ui.monitorid].decoder.variables[processlist_ui.variableid].processlist = processlist_ui.encode(processlist_ui.variableprocesslist);
                 monitor.setdecoder(processlist_ui.monitorid,processlist_ui.monitors[processlist_ui.monitorid].decoder);
