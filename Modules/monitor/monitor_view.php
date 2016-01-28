@@ -141,13 +141,16 @@
 	Modbus_PM210: {
       name: 'Registadores Modbus PM-210',
       updateinterval: 30,
-      variables: [	  
-        /* {name: 'Real_Energy_Consumption_H', type: 1, units: 'kWh'}, */ 	/* scale = reg 4108 */
-        /* {name: 'Real_Energy_Consumption_L', type: 1, units: 'kWh'},  */	/* scale = reg 4108 */
-        /* {name: 'Apparent_Energy_Consumption_H', type: 1, units: 'kVAh'}, */ /* scale = reg 4108 */
-        /* {name: 'Apparent_Energy_Consumption_L', type: 1, units: 'kVAh'}, */ /* scale = reg 4108 */
-        /* {name: 'Reactive_Energy_Consumption_H', type: 1, units: 'kVARh'}, */ /* scale = reg 4108 */ 
-        /* {name: 'Reactive_Energy_Consumption_L', type: 1, units: 'kVARh'},  */ /* scale = reg 4108 */ 
+      variables: [
+		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */	  
+		{name: 'Slave', type: 0, scale: 1, units: ' '}, /* id */
+		{name: 'Entradas', type: 0, scale: 1, units: 'b'}, /* entrada */
+		{name: 'Ano', type: 0, scale: 1, units: 'a'}, /* ano */
+		{name: 'Mes', type: 0, scale: 1, units: 'm'}, /* mes */
+		{name: 'Dia', type: 0, scale: 1, units: 'd'}, /* dia */
+		{name: 'Horas', type: 0, scale: 1, units: 'h'}, /* hora */
+		{name: 'Minutos', type: 0, scale: 1, units: 'm'}, /* minuto */
+		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */		
 		{name: 'Real_Energy_Consumption', type: 2 , units: 'kWh'}, 	/* scale = reg 4108 */
         {name: 'Apparent_Energy_Consumption', type: 2, units: 'kVAh'}, /* scale = reg 4108 */
         {name: 'Reactive_Energy_Consumption', type: 2, units: 'kVARh'}, /* scale = reg 4108 */ 
@@ -183,7 +186,8 @@
 	  Modbus_T500: {
       name: 'Modbus T500',
       updateinterval: 30,
-      variables: [	  
+      variables: [
+		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */	  
 		{name: 'Slave', type: 0, scale: 1, units: ' '}, /* id */
 		{name: 'Entradas', type: 0, scale: 1, units: 'b'}, /* entrada */
 		{name: 'Ano', type: 0, scale: 1, units: 'a'}, /* ano */
