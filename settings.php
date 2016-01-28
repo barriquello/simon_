@@ -57,13 +57,13 @@
         // Make sure that emoncms has write permission's to the datadirectory folders
 
 		'phpfiwa'=>array(
-            'datadir' => '{$permdatadir}\emoncmsdata\phpfiwa\\'
+            'datadir' => '../../data/emoncmsdata/phpfiwa/'
         ),
         'phpfina'=>array(
             'datadir' => '../../data/emoncmsdata/phpfina/'
         ),
         'phptimeseries'=>array(
-            'datadir' => '{$permdatadir}\emoncmsdata\phptimeseries\\'
+            'datadir' => '../../data/emoncmsdata/phptimeseries/'
         )
 
     );
