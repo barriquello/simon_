@@ -60,7 +60,7 @@
             'datadir' => '{$permdatadir}\emoncmsdata\phpfiwa\\'
         ),
         'phpfina'=>array(
-            'datadir' => '{$permdatadir}\emoncmsdata\phpfina\\'
+            'datadir' => '{$permdatadir}/emoncmsdata/phpfina'
         ),
         'phptimeseries'=>array(
             'datadir' => '{$permdatadir}\emoncmsdata\phptimeseries\\'
