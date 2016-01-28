@@ -88,7 +88,7 @@
     // Enable multi user emoncms.
     // If set to false, emoncms will automatically remove the register form and
     // ability to create further users after the first user has been created
-    $enable_multi_user = false;
+    $enable_multi_user = true;
 
     // Enable remember me feature
     $enable_rememberme = true;
