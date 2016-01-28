@@ -162,8 +162,9 @@ var processlist_ui =
             console.log("Process_add");
             var processid = $('#process-select').val();
             var process = processlist_ui.processlist[processid];
-            var arg = '';
-            
+            var arg = '';            	
+				
+			console.log(process);	
             // Type: value (scale, offset)
             if (process[1]==0) arg = $("#value-input").val();
             
@@ -175,6 +176,8 @@ var processlist_ui =
             {
                 var feedid = $("#feed-select").val();
               
+			    console.log("Datatype_engine");
+			  
                 if (feedid==-1) 
                 {
                     var feedname = $('#feed-name').val();
@@ -194,6 +197,8 @@ var processlist_ui =
                         return false;
                     }
                     
+					console.log(datatype+" "+engine);
+					
 					var result = feed.create(feedtag,feedname,datatype,engine,options);
                     //var result = feed.create(feedname,datatype,engine,options);
                     feedid = result.feedid;
@@ -215,9 +220,7 @@ var processlist_ui =
             
             //if (arg!="") 
             //{
-                console.log(processid+" "+arg);
-				console.log("Datatype_engine");
-				console.log(datatype+" "+engine);
+                console.log(processid+" "+arg);				
                 processlist_ui.variableprocesslist.push([processid,arg]);
                 processlist_ui.monitors[processlist_ui.monitorid].decoder.variables[processlist_ui.variableid].processlist = processlist_ui.encode(processlist_ui.variableprocesslist);
                 monitor.setdecoder(processlist_ui.monitorid,processlist_ui.monitors[processlist_ui.monitorid].decoder);
