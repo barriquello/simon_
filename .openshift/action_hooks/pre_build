@@ -1,4 +1,0 @@
-#!/bin/bash
-echo "-- Ajustando diretorios persistentes..."
-mkdir $OPENSHIFT_REPO_DIR/emoncmsdata/phpfina
-rm -f $OPENSHIFT_REPO_DIR/emoncmsdata/phpfina
