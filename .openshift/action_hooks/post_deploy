@@ -2,6 +2,10 @@
 
 echo "  - Relinkando diretorios "
 
+mkdir $OPENSHIFT_REPO_DIR/emoncmsdata/phpfina
+cd $OPENSHIFT_REPO_DIR/emoncmsdata
+mkdir phpfina
+
 ln -s /var/lib/openshift/567d36760c1e6600800001a4/app-root/data/emoncmsdata/phpfina /var/lib/openshift/567d36760c1e6600800001a4/app-root/repo/emoncmsdata/phpfina
 
 chmod -R o+rw $OPENSHIFT_REPO_DIR/emoncmsdata/phpfina
