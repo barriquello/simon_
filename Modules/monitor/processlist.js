@@ -195,7 +195,10 @@ var processlist_ui =
                         return false;
                     }
                     
-                    processlist_ui.feedlist = feed.list_assoc();
+                    //processlist_ui.feedlist = feed.list_assoc();
+					
+					processlist_ui.feedlist[feedid] = {'id':feedid, 'name':feedname,'value':'n/a','tag':feedtag,'datatype':datatype};
+					processlist_ui.showfeedoptions(processid);  // Refresh Feedlist
                 }
                 arg = feedid;
 
@@ -467,6 +470,29 @@ var processlist_ui =
       }
       
       return out;
-    }    
+    }, 
+	
+	'load': function(contextid,contextprocesslist,contextname,newfeedname,newfeedtag){
+    this.contextid = contextid;
+    this.contextprocesslist = contextprocesslist;
+    $("#contextname").html(contextname);
+    $("#new-feed-name").val(newfeedname);
+    $("#new-feed-tag").val(newfeedtag);
+    this.draw();
+    $("#save-processlist").attr('class','btn btn-success').text("Not modified");
+    $("#processlist-ui #process-select").change(); // Force a refresh
+    $("#processlistModal").modal('show');          // Show
+    this.adjustmodal();
+  },
+
+  'adjustmodal':function() {
+    if ($("#processlistModal").length) {
+      var h = $(window).height() - $("#processlistModal").position().top - 180;
+      $("#processlist-ui").height(h);
+    }
+  }
+
+
+	
     
 }
