@@ -29,8 +29,8 @@
     $mqtt_password= "";
 
 
-//4 #### Engine settings
-	$permdatadir = getenv('OPENSHIFT_DATA_DIR');
+	//4 #### Engine settings
+	//$permdatadir = getenv('OPENSHIFT_DATA_DIR');
 	
     $feed_settings = array(
         // Supported engines. Uncommented engines will not be available for user to create a new feed using it. Existing feeds with a hidden engine still work.
