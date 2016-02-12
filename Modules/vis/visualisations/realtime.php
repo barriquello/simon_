@@ -90,7 +90,7 @@
     function getdp()
     {
      var result = {};
-      $.ajax({ url: path+"feed/timevalue.json", data: "id="+feedid, dataType: 'json', async: false, success: function(datain) {result = datain;} });
+      $.ajax({ url: path+"feed/timevalue.json", data: "&apikey="+apikey+"&id="+feedid, dataType: 'json', async: false, success: function(datain) {result = datain;} });
 
       var timestamp = new Date;
       
