@@ -139,7 +139,7 @@
     },
 	
 	Modbus_PM210: {
-      name: 'Medidor PM-210',
+      name: 'Medidor PM210',
       updateinterval: 30,
       variables: [	  
 		{name: 'Unix_time', type: 2 , units: 's'}, 	/*  */
@@ -227,10 +227,10 @@
 		{name: 'Horas', type: 0, scale: 1, units: 'h'}, /* hora */
 		{name: 'Minutos', type: 0, scale: 1, units: 'm'}, /* minuto */
 		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */
-	    {name: 'Pressure_Valve_H', type: 0, scale: 1, units: 'Bar'}, /* int */
-		{name: 'Pressure_Valve_L', type: 0, scale: 1, units: 'Bar'}, /* int */
-		{name: 'Oil_Level_H', type: 6, scale: 1, units: 'L'}, /* int */
-		{name: 'Oil_Level_L', type: 6, scale: 1, units: 'L'},  /* int */	
+		{name: 'SD_bytes_available', type: 2 , units: 'B'}, 	/*  */	  
+		{name: 'Local_time', type: 2 , units: 's'}, 	/* segundos */	 
+	    {name: 'Pressure_Valve', type: 0, scale: 1, units: 'Bar'}, /* byte */
+		{name: 'Oil_Level', type: 0, scale: 1, units: 'L'} /* byte */	
       ]
     },
 	
