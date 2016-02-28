@@ -32,6 +32,27 @@ function instgraph(data)
   });
 }
 
+function plotHistogram(data, start, end)
+{
+  barwidth = 50;
+  $.plot(placeholder,[
+  {
+      color: "#0096ff",
+      data: data ,				//data
+      //lines: { show: true, fill: true }		//style
+      bars: {
+        show: true,
+        align: "center",
+        barWidth: barwidth,
+        fill: true
+      }
+  }], {
+    xaxis: { mode: null },
+    grid: { show: true, hoverable: true, clickable: true },
+    selection: { mode: "x" }
+  } );
+}
+
 
 
 

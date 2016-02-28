@@ -11,7 +11,6 @@ $schema['dashboard'] = array(
     'main' => array('type' => 'tinyint(1)', 'default'=>false),
     'public' => array('type' => 'tinyint(1)', 'default'=>false),
     'published' => array('type' => 'tinyint(1)', 'default'=>false),
-    'showdescription' => array('type' => 'tinyint(1)', 'default'=>false),
-    'backgroundcolor' => array('type' => "varchar(6)", 'default'=>'EDF7FC')
+    'showdescription' => array('type' => 'tinyint(1)', 'default'=>false)
 );
 

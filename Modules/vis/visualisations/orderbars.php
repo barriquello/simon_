@@ -13,9 +13,11 @@
 ?>
 
  <!--[if IE]><script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/excanvas.min.js"></script><![endif]-->
+ <script type="text/javascript" src="<?php echo $path; ?>Modules/feed/feed.js"></script>
  
  <script language="javascript" type="text/javascript" src="<?php echo $path;?>Lib/flot/jquery.flot.min.js"></script>
- 
+ <script language="javascript" type="text/javascript" src="<?php echo $path; ?>Lib/flot/jquery.flot.selection.min.js"></script>
+
 <script language="javascript" type="text/javascript" src="<?php echo $path; ?>Modules/vis/visualisations/common/api.js"></script>
 <script language="javascript" type="text/javascript" src="<?php echo $path; ?>Modules/vis/visualisations/common/inst.js"></script>
 <script language="javascript" type="text/javascript" src="<?php echo $path; ?>Modules/vis/visualisations/common/proc.js"></script>
@@ -45,9 +47,6 @@
     var start = +new Date - timeWindow;  //Get start time
     var end = +new Date; 
 
-    start = Math.floor(start / 86400000) * 86400000;
-    end = Math.floor(end / 86400000) * 86400000;
-    
     var graph_data = [];
     vis_feed_data();
 
@@ -59,7 +58,7 @@
 
     function vis_feed_data()
     {
-        graph_data = get_feed_data(feedid,start,end,3600*24,1,1);
+        graph_data = feed.get_average(feedid,start,end,3600*24);
 
         for(x = 0; x < graph_data.length; x++) {
             for(y = 0; y < (graph_data.length-1); y++) {
