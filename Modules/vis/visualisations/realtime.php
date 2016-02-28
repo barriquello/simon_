@@ -89,9 +89,8 @@
     
     function getdp()
     {
-     var result = {};
-      $.ajax({ url: path+"feed/timevalue.json", data: "id="+feedid, dataType: 'json', async: false, success: function(datain) {result = datain;} });
-
+     var result = {};      
+	  $.ajax({ url: path+"feed/timevalue.json", data: "&apikey="+apikey+"&id="+feedid, dataType: 'json', async: false, success: function(datain) {result = datain;} });
       var timestamp = new Date;
       
       if (data[data.length-1][0]!=result.time*1000) {
