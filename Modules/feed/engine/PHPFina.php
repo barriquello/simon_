@@ -646,7 +646,8 @@ class PHPFina
             if (!is_nan($val[1])) 
 			{
 				//fwrite($exportfh, $time.$csv_field_separator.number_format($val[1],$csv_decimal_places,$csv_decimal_place_separator,'')."\n");
-				echo $time."\t".number_format($val[1],$csv_decimal_places,$csv_decimal_place_separator,'')."\n";
+				//echo $time."\t".number_format($val[1],$csv_decimal_places,$csv_decimal_place_separator,'')."\n";
+				echo $time."\t".number_format($val[1],2,'.','')."\n";
 			}
 
             $i++;
