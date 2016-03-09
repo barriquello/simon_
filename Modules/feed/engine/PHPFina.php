@@ -622,7 +622,7 @@ class PHPFina
         header("Pragma: no-cache");
 
 		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
-		echo $meta->start_time."\t".$$meta->interval."\n";
+		//echo $meta->start_time."\t".$$meta->interval."\n";
 		
 		echo "time"."\t"."value"."\n";
 		
