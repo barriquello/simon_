@@ -580,6 +580,10 @@ class PHPFina
 
         // If meta data file does not exist then exit
         if (!$meta = $this->get_meta($id)) return false;
+		
+		$metastarttime = $meta->start_time;
+		$metainterval = $meta->interval;
+		$metanpoints = $meta->npoints;
         
         if ($outinterval<$meta->interval) $outinterval = $meta->interval;
         $dp = ceil(($end - $start) / $outinterval);
@@ -622,7 +626,7 @@ class PHPFina
         header("Pragma: no-cache");
 
 		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
-		//echo $meta->start_time."\t".$$meta->interval."\n";
+		echo $meta->start_time."\t".$meta->interval."\t".$meta->npoints."\n";
 		
 		echo "time"."\t"."value"."\n";
 		
