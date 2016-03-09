@@ -575,6 +575,8 @@ class PHPFina
         $start = intval($start);
         $end = intval($end);
         $outinterval= (int) $outinterval;
+		
+		$feedname = $id.".dat";
 
         // If meta data file does not exist then exit
         if (!$meta = $this->get_meta($id)) return false;
@@ -619,6 +621,8 @@ class PHPFina
         header("Expires: 0");
         header("Pragma: no-cache");
 
+		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\n";
+		
 		echo "time"."\t"."value"."\n";
 		
         // Write to output stream
@@ -626,7 +630,8 @@ class PHPFina
 		
         // The datapoints are selected within a loop that runs until we reach a
         // datapoint that is beyond the end of our query range
-        $fh = fopen($this->dir.$id.".dat", 'rb');
+        // $fh = fopen($this->dir.$id.".dat", 'rb');
+		$fh = fopen($this->dir.$feedname, 'rb');
         while($time<=$end)
         {
             // $position steps forward by skipsize every loop
