@@ -621,7 +621,7 @@ class PHPFina
         header("Expires: 0");
         header("Pragma: no-cache");
 
-		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\n";
+		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
 		
 		echo "time"."\t"."value"."\n";
 		
