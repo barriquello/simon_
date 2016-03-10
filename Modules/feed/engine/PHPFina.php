@@ -579,11 +579,7 @@ class PHPFina
 		$feedname = $id.".dat";
 
         // If meta data file does not exist then exit
-        if (!$meta = $this->get_meta($id)) return false;
-		
-		$metastarttime = $meta->start_time;
-		$metainterval = $meta->interval;
-		$metanpoints = $meta->npoints;
+        if (!$meta = $this->get_meta($id)) return false;		
         
         if ($outinterval<$meta->interval) $outinterval = $meta->interval;
         $dp = ceil(($end - $start) / $outinterval);
@@ -609,6 +605,10 @@ class PHPFina
             $startpos = ceil(($start - $meta->start_time) / $meta->interval);
         }
 
+		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
+		echo $meta->start_time."\t".$meta->interval."\t".$meta->npoints."\n";
+		
+		
         $data = array();
         $time = 0; $i = 0;
         
@@ -623,10 +623,7 @@ class PHPFina
 		header("Content-Type: application/vnd.ms-excel");
 		
         header("Expires: 0");
-        header("Pragma: no-cache");
-
-		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
-		echo $meta->start_time."\t".$meta->interval."\t".$meta->npoints."\n";
+        header("Pragma: no-cache");	
 		
 		echo "time"."\t"."value"."\n";
 		
