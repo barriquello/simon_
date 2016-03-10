@@ -605,8 +605,8 @@ class PHPFina
             $startpos = ceil(($start - $meta->start_time) / $meta->interval);
         }
 
-		echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
-		echo $meta->start_time."\t".$meta->interval."\t".$meta->npoints."\n";
+		//echo $start."\t".$end."\t".$dp_in_range."\t".$startpos."\t".$outinterval."\t".$skipsize."\n";
+		//echo $meta->start_time."\t".$meta->interval."\t".$meta->npoints."\n";
 		
 		
         $data = array();
