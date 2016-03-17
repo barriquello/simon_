@@ -155,7 +155,7 @@ class Monitor
                 if ($variable->type==1)
                 {
                     if (!isset($bytes[$pos+1])) break;
-                    $value = (int) $bytes[$pos] + (int) $bytes[$pos+1]*256;
+                    $value = (int) $bytes[$pos+1] + (int) $bytes[$pos]*256;
                     if ($value>32768) $value += -65536;  
                     $pos += 2;
                 }
@@ -178,7 +178,7 @@ class Monitor
                 if ($variable->type==3)
                 {
                     if (!isset($bytes[$pos])) break;
-                    $value = (int) $bytes[$pos]*256 + (int) $bytes[$pos+1];
+                    $value = (int) $bytes[$pos+1]*256 + (int) $bytes[$pos];
                     if ($value>32768) $value += -65536;  
                     $pos += 2;
                 }

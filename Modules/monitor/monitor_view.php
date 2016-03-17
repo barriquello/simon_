@@ -151,35 +151,35 @@
 		{name: 'Horas', type: 0, scale: 1, units: 'h'}, /* hora */
 		{name: 'Minutos', type: 0, scale: 1, units: 'm'}, /* minuto */
 		{name: 'Segundos', type: 0, scale: 1, units: 's'}, /* segundos */
-		{name: 'Real_Energy_Consumption', type: 2 , units: 'kWh'}, 	/* scale = reg 4108 */
-        {name: 'Apparent_Energy_Consumption', type: 2, units: 'kVAh'}, /* scale = reg 4108 */
-        {name: 'Reactive_Energy_Consumption', type: 2, units: 'kVARh'}, /* scale = reg 4108 */ 
-        {name: 'Total_Real_Power', type: 1, units: 'kW'}, /* scale = reg 4107 */
-        {name: 'Total_Apparent_Power', type: 1, units: 'kVA'}, /* scale = reg 4107 */
-        {name: 'Total_Reactive_Power', type: 1, units: 'kVAR'}, /* scale = reg 4107 */ 
+		{name: 'Real_Energy_Consumption', type: 4 , units: 'kWh'}, 	/* scale = reg 4108 */
+        {name: 'Apparent_Energy_Consumption', type: 4, units: 'kVAh'}, /* scale = reg 4108 */
+        {name: 'Reactive_Energy_Consumption', type: 4, units: 'kVARh'}, /* scale = reg 4108 */ 
+        {name: 'Total_Real_Power', type: 1, scale: 0.1, units: 'kW'}, /* scale = reg 4107 */
+        {name: 'Total_Apparent_Power', type: 1, scale: 0.1, units: 'kVA'}, /* scale = reg 4107 */
+        {name: 'Total_Reactive_Power', type: 1, scale: 0.1, units: 'kVAR'}, /* scale = reg 4107 */ 
         {name: 'Total_Power_Factor', type: 1, scale: 0.0001, units: 'FP'},  /* scale 0.0001, 0 to 10000  */
 		{name: 'Frequency', type: 1, scale: 0.01, units: 'Hz'},  /* Hz, scale 0.01, 4500 to 6500 */
-		{name: 'Total_Real_Power_Present_Demand', type: 1, units: 'kW'}, /* scale = reg 4107 */
-        {name: 'Total_Apparent_Power_Present_Demand', type: 1, units: 'kVA'}, /* scale = reg 4107 */
-        {name: 'Total_Reactive_Power_Present_Demand', type: 1, units: 'kVAR'}, /* scale = reg 4107 */ 
-		{name: 'Total_Real_Power_Max_Demand', type: 1, units: 'kW'}, /* scale = reg 4107 */
-        {name: 'Total_Apparent_Power_Max_Demand', type: 1, units: 'kVA'}, /* scale = reg 4107 */
-        {name: 'Total_Reactive_Power_Max_Demand', type: 1, units: 'kVAR'}, /* scale = reg 4107 */ 
-		{name: 'Current_Instantaneous_Phase_A', type: 1, units: 'A'}, /* scale = reg 4105 */
-        {name: 'Current_Instantaneous_Phase_B', type: 1, units: 'A'}, /* scale = reg 4105 */
-        {name: 'Current_Instantaneous_Phase_C', type: 1, units: 'A'}, /* scale = reg 4105 */ 
-		{name: 'Current_Present_Demand_Phase_A', type: 1, units: 'A'}, /* scale = reg 4105 */
-        {name: 'Current_Present_Demand_Phase_B', type: 1, units: 'A'}, /* scale = reg 4105 */
-        {name: 'Current_Present_Demand_Phase_C', type: 1, units: 'A'}, /* scale = reg 4105 */ 		
-		{name: 'Current_Max_Demand_Phase_A', type: 1, units: 'A'}, /* scale = reg 4105 */
-        {name: 'Current_Max_Demand_Phase_B', type: 1, units: 'A'}, /* scale = reg 4105 */
-        {name: 'Current_Max_Demand_Phase_C', type: 1, units: 'A'}, /* scale = reg 4105 */ 		
-		{name: 'Voltage_Phase_A_B', type: 1, units: 'V'}, /* scale = reg 4106 */
-        {name: 'Voltage_Phase_B_C', type: 1, units: 'V'}, /* scale = reg 4106 */
-        {name: 'Voltage_Phase_A_C', type: 1, units: 'V'}, /* scale = reg 4106 */ 		
-		{name: 'Voltage_Phase_A_N', type: 1, units: 'V'}, /* scale = reg 4106 */
-        {name: 'Voltage_Phase_B_N', type: 1, units: 'V'}, /* scale = reg 4106 */
-        {name: 'Voltage_Phase_C_N', type: 1, units: 'V'}, /* scale = reg 4106 */ 
+		{name: 'Total_Real_Power_Present_Demand', type: 1, scale: 0.1, units: 'kW'}, /* scale = reg 4107 */
+        {name: 'Total_Apparent_Power_Present_Demand', type: 1, scale: 0.1, units: 'kVA'}, /* scale = reg 4107 */
+        {name: 'Total_Reactive_Power_Present_Demand', type: 1, scale: 0.1, units: 'kVAR'}, /* scale = reg 4107 */ 
+		{name: 'Total_Real_Power_Max_Demand', type: 1, scale: 0.1, units: 'kW'}, /* scale = reg 4107 */
+        {name: 'Total_Apparent_Power_Max_Demand', type: 1, scale: 0.1, units: 'kVA'}, /* scale = reg 4107 */
+        {name: 'Total_Reactive_Power_Max_Demand', type: 1, scale: 0.1, units: 'kVAR'}, /* scale = reg 4107 */ 
+		{name: 'Current_Instantaneous_Phase_A', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */
+        {name: 'Current_Instantaneous_Phase_B', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */
+        {name: 'Current_Instantaneous_Phase_C', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */ 
+		{name: 'Current_Present_Demand_Phase_A', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */
+        {name: 'Current_Present_Demand_Phase_B', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */
+        {name: 'Current_Present_Demand_Phase_C', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */ 		
+		{name: 'Current_Max_Demand_Phase_A', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */
+        {name: 'Current_Max_Demand_Phase_B', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */
+        {name: 'Current_Max_Demand_Phase_C', type: 1, scale: 0.1, units: 'A'}, /* scale = reg 4105 */ 		
+		{name: 'Voltage_Phase_A_B', type: 1, scale: 0.1, units: 'V'}, /* scale = reg 4106 */
+        {name: 'Voltage_Phase_B_C', type: 1, scale: 0.1, units: 'V'}, /* scale = reg 4106 */
+        {name: 'Voltage_Phase_A_C', type: 1, scale: 0.1, units: 'V'}, /* scale = reg 4106 */ 		
+		{name: 'Voltage_Phase_A_N', type: 1, scale: 0.1, units: 'V'}, /* scale = reg 4106 */
+        {name: 'Voltage_Phase_B_N', type: 1, scale: 0.1, units: 'V'}, /* scale = reg 4106 */
+        {name: 'Voltage_Phase_C_N', type: 1, scale: 0.1, units: 'V'}, /* scale = reg 4106 */ 
 		{name: 'Scale_Factor_I', type: 0, units: 'exp'}, /* scale = reg 4106 */ 		
 		{name: 'Scale_Factor_V', type: 0, units: 'exp'}, /* scale = reg 4106 */
         {name: 'Scale_Factor_W', type: 0, units: 'exp'}, /* scale = reg 4106 */
