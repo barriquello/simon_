@@ -1,3 +1,10 @@
+<?php
+// Configurações:
+// Fuso horário a apresentar ( http://php.net/manual/en/timezones.php )
+$FusoHorario = 'America/Sao_Paulo';
+// Formato de data ( http://php.net/manual/en/function.date.php )
+$FormatoData = 'd-M-Y H:i:s e';
+?>
 <html><head><title>IGSIMON_MOBILE</title></head><body>
 <!-- CSS -->
 <style type="text/css">
@@ -20,7 +27,10 @@ if (isset($_GET['apikey']))
   $Json=file_get_contents($Comando);
   
   $Dados = json_decode($Json);
-  echo "<div align=\"right\"><b>Hor&aacute;rio: ".date('d-M-Y H:i:s T',$Dados[0]->time)."</b></div>";
+  $Horario = new DateTime(date('d-M-Y H:i:s T',$Dados[0]->time), new DateTimeZone('UTC'));
+  $Horario = $Horario->setTimezone(new DateTimeZone($FusoHorario));
+  echo "<div align=\"right\"><b>Hor&aacute;rio: ".$Horario->format($FormatoData)."</b></div>";
+  //echo "<div align=\"right\"><b>Hor&aacute;rio: ".date('d-M-Y H:i:s T',$Dados[0]->time)."</b></div>";
   echo '<table class="tabelas" width=100%><tr><td><b>Vari&aacute;vel</b></td><td><b>Valor</b></td><td><b>Gr&aacute;fico</b></td></tr>';
   //echo "<tr><td>Hor&aacute;rio</td><td>".date('d-M-Y H:i:s T',$Dados[0]->time)."</td><td></td></tr>";
   $traducao = array(
