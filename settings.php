@@ -6,8 +6,8 @@
 	$server_host = getenv('OPENSHIFT_MYSQL_DB_HOST');
 	$server_port = getenv('OPENSHIFT_MYSQL_DB_PORT');
 	*/
-	$username = getenv('MYSQL_USER');
-    $password = getenv('MYSQL_PASSWORD');
+	$username = "simondbuser";
+    $password = "simondbpwd";
 	$server_host = "localhost";
 	$server_port = 3306;
     $server   = "{$server_host}:{$server_port}";
