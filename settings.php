@@ -1,10 +1,15 @@
 <?php
 
 //1 #### Mysql database settings
-	$username = getenv('OPENSHIFT_MYSQL_DB_USERNAME');
+	/* $username = getenv('OPENSHIFT_MYSQL_DB_USERNAME');
     $password = getenv('OPENSHIFT_MYSQL_DB_PASSWORD');
 	$server_host = getenv('OPENSHIFT_MYSQL_DB_HOST');
 	$server_port = getenv('OPENSHIFT_MYSQL_DB_PORT');
+	*/
+	$username = getenv('MYSQL_USER');
+    $password = getenv('MYSQL_PASSWORD');
+	$server_host = "localhost";
+	$server_port = 3306;
     $server   = "{$server_host}:{$server_port}";
 	$database = "simon";
     // Skip database setup test - set to false once database has been setup.
