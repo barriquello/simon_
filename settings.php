@@ -8,7 +8,7 @@
 	*/
 	$username = 'simondbuser';
     $password = 'simondbpwd';
-	$server_host = 'localhost';
+	$server_host = '172.30.134.77';
 	$server_port = 3306;
     $server   = "{$server_host}:{$server_port}";
 	$database = "simon";
