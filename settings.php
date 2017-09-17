@@ -6,13 +6,21 @@
 	$server_host = getenv('OPENSHIFT_MYSQL_DB_HOST');
 	$server_port = getenv('OPENSHIFT_MYSQL_DB_PORT');
 	*/
+	$username = getenv("MYSQL_USER");
+    $password = getenv("MYSQL_PASSWORD");
+	$server_host = getenv(strtoupper(getenv("DATABASE_SERVICE_NAME"))."_SERVICE_HOST");
+	$server_port = getenv(strtoupper(getenv("DATABASE_SERVICE_NAME"))."_SERVICE_PORT");
+	$database = getenv("MYSQL_DATABASE");
+	
+	/*
 	$username = 'simondbuser';
     $password = 'simondbpwd';
 	$server_host = '172.30.134.77';
 	$server_port = 3306;
-    $server   = "{$server_host}:{$server_port}";
 	$database = "simon";
-    // Skip database setup test - set to false once database has been setup.
+*/
+    $server   = "{$server_host}:{$server_port}";
+	// Skip database setup test - set to false once database has been setup.
     $dbtest = true;
 
 
