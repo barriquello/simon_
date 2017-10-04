@@ -29,7 +29,7 @@
     require "Modules/log/EmonLogger.php";
 
     // 2) Database
-	echo "$server,$username,$password,$database";
+	//echo "$server,$username,$password,$database";
 	
     $mysqli = @new mysqli($server,$username,$password,$database);
 

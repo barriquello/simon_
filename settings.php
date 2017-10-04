@@ -12,13 +12,6 @@
 	$server_port = getenv(strtoupper(getenv("DATABASE_SERVICE_NAME"))."_SERVICE_PORT");
 	$database = getenv("MYSQL_DATABASE");
 	
-	/*
-	$username = 'simondbuser';
-    $password = 'simondbpwd';
-	$server_host = '172.30.134.77';
-	$server_port = 3306;
-	$database = "simon";
-*/
     $server   = "{$server_host}:{$server_port}";
 	// Skip database setup test - set to false once database has been setup.
     $dbtest = true;
@@ -70,13 +63,13 @@
         // Make sure that emoncms has write permission's to the datadirectory folders
 
 		'phpfiwa'=>array(
-            'datadir' => '../../data/emoncmsdata/phpfiwa/'
+            'datadir' => 'var/lib/mysql/phpfiwa/'
         ),
         'phpfina'=>array(
-            'datadir' => '../../data/emoncmsdata/phpfina/'
+            'datadir' => 'var/lib/mysql/phpfina/'
         ),
         'phptimeseries'=>array(
-            'datadir' => '../../data/emoncmsdata/phptimeseries/'
+            'datadir' => 'var/lib/mysql/phptimeseries/'
         )
 
     );
